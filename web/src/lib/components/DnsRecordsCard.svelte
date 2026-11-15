@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { DnsResults, DomainAlignment, ReceivedHop } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -40,7 +41,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-diagram-3 me-2"></i>
-                DNS Records
+                {$t("DNS Records", "DNS-Einträge")}
             </span>
             <span>
                 {#if dnsScore !== undefined}
@@ -56,11 +57,13 @@
     </div>
     <div class="card-body">
         {#if !dnsResults}
-            <p class="text-muted mb-0">No DNS results available</p>
+            <p class="text-muted mb-0">
+                {$t("No DNS results available", "Keine DNS-Ergebnisse verfügbar")}
+            </p>
         {:else}
             {#if dnsResults.errors && dnsResults.errors.length > 0}
                 <div class="alert alert-warning mb-3">
-                    <strong>Errors:</strong>
+                    <strong>{$t("Errors:", "Fehler")}</strong>
                     <ul class="mb-0">
                         {#each dnsResults.errors as error}
                             <li>{error}</li>
@@ -74,7 +77,8 @@
                 {#if receivedChain && receivedChain.length > 0}
                     <div class="mb-3 d-flex align-items-center gap-2">
                         <h4 class="mb-0 text-truncate">
-                            Received from: <code
+                            {$t("Received from:", "Empfangen von")}
+                            <code
                                 >{receivedChain[0].from} ({receivedChain[0].reverse || "Unknown"} [{receivedChain[0]
                                     .ip}])</code
                             >
@@ -98,19 +102,27 @@
                 <div class="mb-3">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <h4 class="mb-0 text-truncate">
-                            Return-Path Domain:
+                            {$t("Return-Path Domain:", "Return-Path-Domain")}
                             <code>{dnsResults.rp_domain || dnsResults.from_domain}</code>
                         </h4>
                         {#if (domainAlignment && !domainAlignment.aligned && !domainAlignment.relaxed_aligned) || (domainAlignment && !domainAlignment.aligned && domainAlignment.relaxed_aligned && dnsResults.dmarc_record && dnsResults.dmarc_record.spf_alignment === "strict") || (!domainAlignment && dnsResults.rp_domain && dnsResults.rp_domain !== dnsResults.from_domain)}
                             <span class="badge bg-danger ms-2">
-                                <i class="bi bi-exclamation-triangle-fill"></i> Differs from From domain
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                {$t("Differs from From domain", "Weicht von der Absenderdomain ab")}
                             </span>
                             <small>
                                 <i class="bi bi-chevron-right"></i>
-                                <a href="#domain-alignment">See domain alignment</a>
+                                <a href="#domain-alignment"
+                                    >{$t(
+                                        "See domain alignment",
+                                        "Domain-Übereinstimmung ansehen",
+                                    )}</a
+                                >
                             </small>
                         {:else}
-                            <span class="badge bg-success ms-2">Same as From domain</span>
+                            <span class="badge bg-success ms-2"
+                                >{$t("Same as From domain", "Entspricht der Absenderdomain")}</span
+                            >
                         {/if}
                     </div>
                 </div>
@@ -138,12 +150,15 @@
                 <!-- From Domain Section -->
                 <div class="mb-3 d-flex align-items-center gap-2">
                     <h4 class="mb-0 text-truncate">
-                        From Domain: <code>{dnsResults.from_domain}</code>
+                        {$t("From Domain:", "Absenderdomain")} <code>{dnsResults.from_domain}</code>
                     </h4>
                     {#if dnsResults.rp_domain && dnsResults.rp_domain !== dnsResults.from_domain}
                         <span class="badge bg-danger ms-2">
-                            <i class="bi bi-exclamation-triangle-fill"></i> Differs from Return-Path
-                            domain
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            {$t(
+                                "Differs from Return-Path domain",
+                                "Weicht von der Return-Path-Domain ab",
+                            )}
                         </span>
                     {/if}
                 </div>

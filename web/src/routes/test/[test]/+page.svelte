@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import { page } from "$app/state";
     import { onDestroy } from "svelte";
 
@@ -192,10 +193,10 @@
 <svelte:head>
     <title>
         {report
-            ? `Test${report.dns_results ? ` of ${report.dns_results.from_domain}` : ""} ${report.test_id?.slice(0, 7) || ""}`
+            ? `Test${report.dns_results ? ` ${$t("of", "für")} ${report.dns_results.from_domain}` : ""} ${report.test_id?.slice(0, 7) || ""}`
             : test
               ? `Test ${test.id.slice(0, 7)}`
-              : "Loading..."} - happyDeliver
+              : $t("Loading...", "Wird geladen …")} · Deliver Zenmail
     </title>
 </svelte:head>
 
@@ -207,9 +208,9 @@
                 role="status"
                 style="width: 3rem; height: 3rem;"
             >
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">{$t("Loading...", "Wird geladen …")}</span>
             </div>
-            <p class="mt-3 text-muted">Loading test...</p>
+            <p class="mt-3 text-muted">{$t("Loading test...", "Test wird geladen …")}</p>
         </div>
     {:else if error}
         <ErrorDisplay status={errorStatus} message={error} showActions={false} />
@@ -235,7 +236,7 @@
                                     class="btn btn-outline-secondary"
                                     type="button"
                                     onclick={() => (menuOpen = !menuOpen)}
-                                    aria-label="Menu"
+                                    aria-label={$t("Menu", "Menü")}
                                 >
                                     <i class="bi bi-three-dots-vertical"></i>
                                 </button>
@@ -243,7 +244,7 @@
                                     <div class="menu-dropdown">
                                         <button class="menu-item" onclick={handleExportJSON}>
                                             <i class="bi bi-download me-2"></i>
-                                            Export JSON Report
+                                            {$t("Export JSON Report", "JSON-Bericht exportieren")}
                                         </button>
                                         <button
                                             class="menu-item"
@@ -251,7 +252,10 @@
                                             disabled={reanalyzing}
                                         >
                                             <i class="bi bi-arrow-clockwise me-2"></i>
-                                            Reanalyze with Latest Version
+                                            {$t(
+                                                "Reanalyze with Latest Version",
+                                                "Mit aktueller Version erneut analysieren",
+                                            )}
                                         </button>
                                         <hr class="menu-divider" />
                                         <a
@@ -261,7 +265,7 @@
                                             onclick={() => (menuOpen = false)}
                                         >
                                             <i class="bi bi-file-earmark-text me-2"></i>
-                                            View Raw Email
+                                            {$t("View Raw Email", "Originalnachricht anzeigen")}
                                         </a>
                                     </div>
                                 {/if}
@@ -382,7 +386,7 @@
                 <div class="col-12 text-center">
                     <a href="/test/" class="btn btn-primary btn-lg">
                         <i class="bi bi-arrow-repeat me-2"></i>
-                        Test Another Email
+                        {$t("Test Another Email", "Weitere E-Mail testen")}
                     </a>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import { page } from "$app/stores";
     import { onMount } from "svelte";
     import { checkBlacklist } from "$lib/api";
@@ -45,7 +46,7 @@
 </script>
 
 <svelte:head>
-    <title>{ip} - Blacklist Check - happyDeliver</title>
+    <title>{ip} - {$t("Blacklist Check", "Sperrlistenprüfung")} · Deliver Zenmail</title>
 </svelte:head>
 
 <div class="container py-5">
@@ -56,11 +57,11 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <h1 class="h2 mb-0">
                         <i class="bi bi-shield-exclamation me-2"></i>
-                        Blacklist Analysis
+                        {$t("Blacklist Analysis", "Sperrlistenanalyse")}
                     </h1>
                     <a href="/blacklist" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-2"></i>
-                        Check Another IP
+                        {$t("Check Another IP", "Weitere IP-Adresse prüfen")}
                     </a>
                 </div>
             </div>
@@ -70,10 +71,16 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-5">
                         <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                            <span class="visually-hidden">{$t("Loading...", "Wird geladen …")}</span
+                            >
                         </div>
                         <h3 class="h5">Checking {ip}...</h3>
-                        <p class="text-muted mb-0">Querying DNS-based blacklists</p>
+                        <p class="text-muted mb-0">
+                            {$t(
+                                "Querying DNS-based blacklists",
+                                "DNS-Sperrlisten werden abgefragt …",
+                            )}
+                        </p>
                     </div>
                 </div>
             {:else if error}
@@ -82,11 +89,11 @@
                     <div class="card-body text-center py-5">
                         <i class="bi bi-exclamation-triangle text-danger" style="font-size: 4rem;"
                         ></i>
-                        <h3 class="h4 mt-4">Check Failed</h3>
+                        <h3 class="h4 mt-4">{$t("Check Failed", "Prüfung fehlgeschlagen")}</h3>
                         <p class="text-muted mb-4">{error}</p>
                         <button class="btn btn-primary" onclick={analyzeIP}>
                             <i class="bi bi-arrow-clockwise me-2"></i>
-                            Try Again
+                            {$t("Try Again", "Erneut versuchen")}
                         </button>
                     </div>
                 </div>
@@ -105,10 +112,12 @@
                                     {#if result.listed_count === 0}
                                         <div class="alert alert-success mb-0 d-inline-block">
                                             <i class="bi bi-check-circle me-2"></i>
-                                            <strong>Not Listed</strong>
+                                            <strong>{$t("Not Listed", "Kein Eintrag")}</strong>
                                             <p class="d-inline mb-0 mt-1 small">
-                                                This IP address is not listed on any checked
-                                                blacklists.
+                                                {$t(
+                                                    "This IP address is not listed on any checked blacklists.",
+                                                    "Diese IP-Adresse steht auf keiner der geprüften Sperrlisten.",
+                                                )}
                                             </p>
                                         </div>
                                     {:else}
@@ -137,7 +146,9 @@
                                         class:bg-secondary={$theme !== "light"}
                                     >
                                         <GradeDisplay score={result.score} grade={result.grade} />
-                                        <small class="text-muted d-block">Blacklist Score</small>
+                                        <small class="text-muted d-block"
+                                            >{$t("Blacklist Score", "Sperrlistenbewertung")}</small
+                                        >
                                     </div>
                                 </div>
                             </div>
@@ -162,39 +173,52 @@
                         <div class="card-body">
                             <h3 class="h5 mb-3">
                                 <i class="bi bi-info-circle me-2"></i>
-                                What This Means
+                                {$t("What This Means", "Was das Ergebnis bedeutet")}
                             </h3>
                             {#if result.listed_count === 0}
                                 <p class="mb-3">
-                                    <strong>Good news!</strong> This IP address is not currently listed
-                                    on any of the checked DNS-based blacklists (RBLs). This indicates
-                                    a good sender reputation and should not negatively impact email deliverability.
+                                    <strong>{$t("Good news!", "Keine Einträge gefunden.")}</strong>
+                                    {$t(
+                                        "This IP address is not currently listed on any of the checked DNS-based blacklists (RBLs). This indicates a good sender reputation and should not negatively impact email deliverability.",
+                                        "Auf den geprüften DNS-Sperrlisten (RBLs) ist die IP-Adresse derzeit unauffällig. Von diesen Listen ist keine negative Auswirkung auf die Zustellung zu erwarten.",
+                                    )}
                                 </p>
                             {:else}
                                 <p class="mb-3">
-                                    <strong>Warning:</strong> This IP address is listed on {result.listed_count}
+                                    <strong>{$t("Warning:", "Hinweis")}</strong> This IP address is
+                                    listed on {result.listed_count}
                                     blacklist{result.listed_count > 1 ? "s" : ""}. Being listed can
                                     significantly impact email deliverability as many mail servers
                                     use these blacklists to filter incoming mail.
                                 </p>
                                 <div class="alert alert-warning">
-                                    <h4 class="h6 mb-2">Recommended Actions:</h4>
+                                    <h4 class="h6 mb-2">
+                                        {$t("Recommended Actions:", "Empfohlene Schritte")}
+                                    </h4>
                                     <ul class="mb-0 small">
                                         <li>
-                                            Investigate the cause of the listing (compromised
-                                            system, spam complaints, etc.)
+                                            {$t(
+                                                "Investigate the cause of the listing (compromised system, spam complaints, etc.)",
+                                                "Ermittle den Grund für den Eintrag, etwa einen kompromittierten Server oder Spam-Beschwerden.",
+                                            )}
                                         </li>
                                         <li>
-                                            Fix any security issues or stop sending practices that
-                                            led to the listing
+                                            {$t(
+                                                "Fix any security issues or stop sending practices that led to the listing",
+                                                "Behebe die Ursache, bevor du erneut sendest.",
+                                            )}
                                         </li>
                                         <li>
-                                            Request delisting from each RBL (check their websites
-                                            for removal procedures)
+                                            {$t(
+                                                "Request delisting from each RBL (check their websites for removal procedures)",
+                                                "Beantrage die Entfernung nach dem Verfahren der jeweiligen Sperrliste.",
+                                            )}
                                         </li>
                                         <li>
-                                            Monitor your IP reputation regularly to prevent future
-                                            listings
+                                            {$t(
+                                                "Monitor your IP reputation regularly to prevent future listings",
+                                                "Prüfe den Ruf der IP-Adresse regelmäßig.",
+                                            )}
                                         </li>
                                     </ul>
                                 </div>
@@ -207,16 +231,20 @@
                         <div class="card-body">
                             <h3 class="h5 mb-3">
                                 <i class="bi bi-lightbulb me-2"></i>
-                                Want Complete Email Analysis?
+                                {$t(
+                                    "Want Complete Email Analysis?",
+                                    "Möchtest du die gesamte E-Mail prüfen?",
+                                )}
                             </h3>
                             <p class="mb-3">
-                                This blacklist check tests IP reputation only. For comprehensive
-                                deliverability testing including DKIM verification, content
-                                analysis, spam scoring, and DNS configuration:
+                                {$t(
+                                    "This blacklist check tests IP reputation only. For comprehensive deliverability testing including DKIM verification, content analysis, spam scoring, and DNS configuration:",
+                                    "Dieser Test prüft den Ruf der IP-Adresse. Der E-Mail-Test berücksichtigt zusätzlich DKIM, Inhalt, Spam-Wertung und DNS-Einstellungen.",
+                                )}
                             </p>
                             <a href="/" class="btn btn-primary">
                                 <i class="bi bi-envelope-plus me-2"></i>
-                                Send Test Email
+                                {$t("Send Test Email", "Testmail senden")}
                             </a>
                         </div>
                     </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { SpamAssassinResult } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -16,7 +17,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-bug me-2"></i>
-                SpamAssassin Analysis
+                {$t("SpamAssassin Analysis", "SpamAssassin-Analyse")}
             </span>
             <span>
                 {#if spamassassin.deliverability_score !== undefined}
@@ -33,13 +34,13 @@
     <div class="card-body">
         <div class="row mb-3">
             <div class="col-md-6">
-                <strong>Score:</strong>
+                <strong>{$t("Score:", "Punktzahl")}</strong>
                 <span class={spamassassin.is_spam ? "text-danger" : "text-success"}>
                     {spamassassin.score.toFixed(2)} / {spamassassin.required_score.toFixed(1)}
                 </span>
             </div>
             <div class="col-md-6">
-                <strong>Classified as:</strong>
+                <strong>{$t("Classified as:", "Einstufung")}</strong>
                 <span class="badge {spamassassin.is_spam ? 'bg-danger' : 'bg-success'} ms-2">
                     {spamassassin.is_spam ? "SPAM" : "HAM"}
                 </span>
@@ -52,9 +53,9 @@
                     <table class="table table-sm table-hover">
                         <thead>
                             <tr>
-                                <th>Test Name</th>
-                                <th class="text-end">Score</th>
-                                <th>Description</th>
+                                <th>{$t("Test Name", "Testname")}</th>
+                                <th class="text-end">{$t("Score", "Punktzahl")}</th>
+                                <th>{$t("Description", "Beschreibung")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -87,7 +88,7 @@
             </div>
         {:else if spamassassin.tests && spamassassin.tests.length > 0}
             <div class="mb-2">
-                <strong>Tests Triggered:</strong>
+                <strong>{$t("Tests Triggered:", "Ausgelöste Tests")}</strong>
                 <div class="mt-2">
                     {#each spamassassin.tests as test}
                         <span
@@ -102,7 +103,7 @@
 
         {#if spamassassin.report}
             <details class="mt-3">
-                <summary class="cursor-pointer fw-bold">Raw Report</summary>
+                <summary class="cursor-pointer fw-bold">{$t("Raw Report", "Rohbericht")}</summary>
                 <pre
                     class="mt-2 small {$theme === 'light'
                         ? 'bg-light'

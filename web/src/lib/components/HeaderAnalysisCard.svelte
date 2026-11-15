@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { DmarcRecord, HeaderAnalysis } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -19,7 +20,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-list-ul me-2"></i>
-                Header Analysis
+                {$t("Header Analysis", "Analyse der Kopfzeilen")}
             </span>
             <span>
                 {#if headerScore !== undefined}
@@ -36,7 +37,7 @@
     <div class="card-body">
         {#if headerAnalysis.issues && headerAnalysis.issues.length > 0}
             <div class="mb-3">
-                <h5>Issues</h5>
+                <h5>{$t("Issues", "Probleme")}</h5>
                 {#each headerAnalysis.issues as issue}
                     <div
                         class="alert alert-{issue.severity === 'critical' ||
@@ -81,16 +82,15 @@
                                   ? 'bi-check-circle text-info'
                                   : 'bi-x-circle-fill text-danger'}"
                         ></i>
-                        Domain Alignment
+                        {$t("Domain Alignment", "Domain-Übereinstimmung")}
                     </h5>
                 </div>
                 <div class="card-body">
                     <p class="card-text small text-muted">
-                        Domain alignment ensures that the visible "From" domain matches the domain
-                        used for authentication (Return-Path or DKIM signature). Proper alignment is
-                        crucial for DMARC compliance, regardless of the policy. It helps prevent
-                        email spoofing by verifying that the sender domain is consistent across all
-                        authentication layers. Only one of the following lines needs to pass.
+                        {$t(
+                            'Domain alignment ensures that the visible "From" domain matches the domain used for authentication (Return-Path or DKIM signature). Proper alignment is crucial for DMARC compliance, regardless of the policy. It helps prevent email spoofing by verifying that the sender domain is consistent across all authentication layers. Only one of the following lines needs to pass.',
+                            "Für DMARC muss die sichtbare Absenderdomain mit der durch SPF oder DKIM authentifizierten Domain übereinstimmen. Ein erfolgreicher Abgleich über SPF oder DKIM genügt.",
+                        )}
                     </p>
                     {#if headerAnalysis.domain_alignment.issues && headerAnalysis.domain_alignment.issues.length > 0}
                         <div class="mt-3">
@@ -124,7 +124,9 @@
                         <div class="flex-fill">
                             <div class="row flex-grow-1">
                                 <div class="col-md-3">
-                                    <small class="text-muted">Strict Alignment</small>
+                                    <small class="text-muted"
+                                        >{$t("Strict Alignment", "Strikte Übereinstimmung")}</small
+                                    >
                                     <div>
                                         <span
                                             class="badge"
@@ -139,10 +141,17 @@
                                             <strong>{spfStrictAligned ? "Pass" : "Fail"}</strong>
                                         </span>
                                     </div>
-                                    <div class="small text-muted mt-1">Exact domain match</div>
+                                    <div class="small text-muted mt-1">
+                                        {$t("Exact domain match", "Exakt dieselbe Domain")}
+                                    </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <small class="text-muted">Relaxed Alignment</small>
+                                    <small class="text-muted"
+                                        >{$t(
+                                            "Relaxed Alignment",
+                                            "Gelockerte Übereinstimmung",
+                                        )}</small
+                                    >
                                     <div>
                                         <span
                                             class="badge"
@@ -158,11 +167,16 @@
                                         </span>
                                     </div>
                                     <div class="small text-muted mt-1">
-                                        Organizational domain match
+                                        {$t(
+                                            "Organizational domain match",
+                                            "Dieselbe Organisationsdomain",
+                                        )}
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <small class="text-muted">From Domain</small>
+                                    <small class="text-muted"
+                                        >{$t("From Domain", "Absenderdomain")}</small
+                                    >
                                     <div>
                                         <code>
                                             {headerAnalysis.domain_alignment.from_domain || "-"}
@@ -170,7 +184,7 @@
                                     </div>
                                     {#if headerAnalysis.domain_alignment.from_org_domain && headerAnalysis.domain_alignment.from_org_domain !== headerAnalysis.domain_alignment.from_domain}
                                         <div class="small text-muted mt-1">
-                                            Org:
+                                            {$t("Org:", "Organisationsdomain")}
                                             <code>
                                                 {headerAnalysis.domain_alignment.from_org_domain}
                                             </code>
@@ -178,7 +192,9 @@
                                     {/if}
                                 </div>
                                 <div class="col-md-3">
-                                    <small class="text-muted">Return-Path Domain</small>
+                                    <small class="text-muted"
+                                        >{$t("Return-Path Domain", "Return-Path-Domain")}</small
+                                    >
                                     <div>
                                         <code>
                                             {headerAnalysis.domain_alignment.return_path_domain ||
@@ -187,7 +203,7 @@
                                     </div>
                                     {#if headerAnalysis.domain_alignment.return_path_org_domain && headerAnalysis.domain_alignment.return_path_org_domain !== headerAnalysis.domain_alignment.return_path_domain}
                                         <div class="small text-muted mt-1">
-                                            Org:
+                                            {$t("Org:", "Organisationsdomain")}
                                             <code>
                                                 {headerAnalysis.domain_alignment
                                                     .return_path_org_domain}
@@ -207,15 +223,24 @@
                                 >
                                     {#if dmarcRecord.spf_alignment === "strict"}
                                         <i class="bi bi-exclamation-triangle me-1"></i>
-                                        <strong>Strict SPF alignment required</strong> — Your DMARC policy
-                                        requires exact domain match. The Return-Path domain must exactly
-                                        match the From domain for SPF to pass DMARC alignment.
+                                        <strong
+                                            >{$t(
+                                                "Strict SPF alignment required",
+                                                "Strikte SPF-Übereinstimmung erforderlich",
+                                            )}</strong
+                                        > — Your DMARC policy requires exact domain match. The Return-Path
+                                        domain must exactly match the From domain for SPF to pass DMARC
+                                        alignment.
                                     {:else}
                                         <i class="bi bi-info-circle me-1"></i>
-                                        <strong>Relaxed SPF alignment allowed</strong> — Your DMARC policy
-                                        allows organizational domain matching. As long as both domains
-                                        share the same organizational domain (e.g., mail.example.com
-                                        and example.com), SPF alignment can pass.
+                                        <strong
+                                            >{$t(
+                                                "Relaxed SPF alignment allowed",
+                                                "Gelockerte SPF-Übereinstimmung zulässig",
+                                            )}</strong
+                                        > — Your DMARC policy allows organizational domain matching. As
+                                        long as both domains share the same organizational domain (e.g.,
+                                        mail.example.com and example.com), SPF alignment can pass.
                                     {/if}
                                 </div>
                             {/if}
@@ -239,7 +264,12 @@
                                 <div class="flex-fill">
                                     <div class="row flex-grow-1">
                                         <div class="col-md-3">
-                                            <small class="text-muted">Strict Alignment</small>
+                                            <small class="text-muted"
+                                                >{$t(
+                                                    "Strict Alignment",
+                                                    "Strikte Übereinstimmung",
+                                                )}</small
+                                            >
                                             <div>
                                                 <span
                                                     class="badge"
@@ -256,11 +286,16 @@
                                                 </span>
                                             </div>
                                             <div class="small text-muted mt-1">
-                                                Exact domain match
+                                                {$t("Exact domain match", "Exakt dieselbe Domain")}
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <small class="text-muted">Relaxed Alignment</small>
+                                            <small class="text-muted"
+                                                >{$t(
+                                                    "Relaxed Alignment",
+                                                    "Gelockerte Übereinstimmung",
+                                                )}</small
+                                            >
                                             <div>
                                                 <span
                                                     class="badge"
@@ -280,11 +315,16 @@
                                                 </span>
                                             </div>
                                             <div class="small text-muted mt-1">
-                                                Organizational domain match
+                                                {$t(
+                                                    "Organizational domain match",
+                                                    "Dieselbe Organisationsdomain",
+                                                )}
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <small class="text-muted">From Domain</small>
+                                            <small class="text-muted"
+                                                >{$t("From Domain", "Absenderdomain")}</small
+                                            >
                                             <div>
                                                 <code
                                                     >{headerAnalysis.domain_alignment.from_domain ||
@@ -293,7 +333,8 @@
                                             </div>
                                             {#if headerAnalysis.domain_alignment.from_org_domain && headerAnalysis.domain_alignment.from_org_domain !== headerAnalysis.domain_alignment.from_domain}
                                                 <div class="small text-muted mt-1">
-                                                    Org: <code
+                                                    {$t("Org:", "Organisationsdomain")}
+                                                    <code
                                                         >{headerAnalysis.domain_alignment
                                                             .from_org_domain}</code
                                                     >
@@ -301,11 +342,14 @@
                                             {/if}
                                         </div>
                                         <div class="col-md-3">
-                                            <small class="text-muted">Signature Domain</small>
+                                            <small class="text-muted"
+                                                >{$t("Signature Domain", "Signaturdomain")}</small
+                                            >
                                             <div><code>{dkim_domain.domain || "-"}</code></div>
                                             {#if dkim_domain.domain !== dkim_domain.org_domain}
                                                 <div class="small text-muted mt-1">
-                                                    Org: <code>{dkim_domain.org_domain}</code>
+                                                    {$t("Org:", "Organisationsdomain")}
+                                                    <code>{dkim_domain.org_domain}</code>
                                                 </div>
                                             {/if}
                                         </div>
@@ -322,17 +366,25 @@
                                             >
                                                 {#if dmarcRecord.dkim_alignment === "strict"}
                                                     <i class="bi bi-exclamation-triangle me-1"></i>
-                                                    <strong>Strict DKIM alignment required</strong> —
-                                                    Your DMARC policy requires exact domain match. The
-                                                    DKIM signature domain must exactly match the From
+                                                    <strong
+                                                        >{$t(
+                                                            "Strict DKIM alignment required",
+                                                            "Strikte DKIM-Übereinstimmung erforderlich",
+                                                        )}</strong
+                                                    > — Your DMARC policy requires exact domain match.
+                                                    The DKIM signature domain must exactly match the From
                                                     domain for DKIM to pass DMARC alignment.
                                                 {:else}
                                                     <i class="bi bi-info-circle me-1"></i>
-                                                    <strong>Relaxed DKIM alignment allowed</strong> —
-                                                    Your DMARC policy allows organizational domain matching.
-                                                    As long as both domains share the same organizational
-                                                    domain (e.g., mail.example.com and example.com),
-                                                    DKIM alignment can pass.
+                                                    <strong
+                                                        >{$t(
+                                                            "Relaxed DKIM alignment allowed",
+                                                            "Gelockerte DKIM-Übereinstimmung zulässig",
+                                                        )}</strong
+                                                    > — Your DMARC policy allows organizational domain
+                                                    matching. As long as both domains share the same organizational
+                                                    domain (e.g., mail.example.com and example.com), DKIM
+                                                    alignment can pass.
                                                 {/if}
                                             </div>
                                         {/if}
@@ -347,16 +399,16 @@
 
         {#if headerAnalysis.headers && Object.keys(headerAnalysis.headers).length > 0}
             <div class="mt-3">
-                <h5 style="margin-bottom: -1.3em">Headers</h5>
+                <h5 style="margin-bottom: -1.3em">{$t("Headers", "Kopfzeilen")}</h5>
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
                             <tr>
                                 <th></th>
-                                <th>When?</th>
-                                <th>Present</th>
-                                <th>Valid</th>
-                                <th>Value</th>
+                                <th>{$t("When?", "Wann?")}</th>
+                                <th>{$t("Present", "Vorhanden")}</th>
+                                <th>{$t("Valid", "Gültig")}</th>
+                                <th>{$t("Value", "Wert")}</th>
                             </tr>
                         </thead>
                         <tbody>

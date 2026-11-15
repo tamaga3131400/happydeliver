@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { ContentAnalysis } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -18,7 +19,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-file-text me-2"></i>
-                Content Analysis
+                {$t("Content Analysis", "Inhaltsanalyse")}
             </span>
             <span>
                 {#if contentScore !== undefined}
@@ -41,7 +42,7 @@
                             ? 'bi-check-circle text-success'
                             : 'bi-x-circle text-muted'} me-2"
                     ></i>
-                    <span>HTML Part</span>
+                    <span>{$t("HTML Part", "HTML-Teil")}</span>
                 </div>
                 <div class="d-flex align-items-center mb-2">
                     <i
@@ -49,7 +50,7 @@
                             ? 'bi-check-circle text-success'
                             : 'bi-x-circle text-muted'} me-2"
                     ></i>
-                    <span>Plaintext Part</span>
+                    <span>{$t("Plaintext Part", "Klartextteil")}</span>
                 </div>
                 {#if typeof contentAnalysis.has_unsubscribe_link === "boolean"}
                     <div class="d-flex align-items-center mb-2">
@@ -58,20 +59,22 @@
                                 ? 'bi-check-circle text-success'
                                 : 'bi-x-circle text-warning'} me-2"
                         ></i>
-                        <span>Unsubscribe Link</span>
+                        <span>{$t("Unsubscribe Link", "Abmeldelink")}</span>
                     </div>
                 {/if}
             </div>
             <div class="col-md-6">
                 {#if contentAnalysis.text_to_image_ratio !== undefined}
                     <div class="mb-2">
-                        <strong>Text to Image Ratio:</strong>
+                        <strong
+                            >{$t("Text to Image Ratio:", "Verhältnis von Text zu Bildern")}</strong
+                        >
                         <span class="ms-2">{contentAnalysis.text_to_image_ratio.toFixed(2)}</span>
                     </div>
                 {/if}
                 {#if contentAnalysis.unsubscribe_methods && contentAnalysis.unsubscribe_methods.length > 0}
                     <div class="mb-2">
-                        <strong>Unsubscribe Methods:</strong>
+                        <strong>{$t("Unsubscribe Methods:", "Abmeldemethoden")}</strong>
                         <div class="mt-1">
                             {#each contentAnalysis.unsubscribe_methods as method}
                                 <span class="badge bg-info me-1">{method}</span>
@@ -84,7 +87,7 @@
 
         {#if contentAnalysis.html_issues && contentAnalysis.html_issues.length > 0}
             <div class="mt-3">
-                <h5>Content Issues</h5>
+                <h5>{$t("Content Issues", "Probleme im Inhalt")}</h5>
                 {#each contentAnalysis.html_issues as issue}
                     <div
                         class="alert alert-{issue.severity === 'critical' ||
@@ -124,7 +127,7 @@
                             <tr>
                                 <th>URL</th>
                                 <th>Status</th>
-                                <th>HTTP Code</th>
+                                <th>{$t("HTTP Code", "HTTP-Code")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -133,7 +136,9 @@
                                     <td>
                                         <small class="text-break">{link.url}</small>
                                         {#if link.is_shortened}
-                                            <span class="badge bg-warning ms-1">Shortened</span>
+                                            <span class="badge bg-warning ms-1"
+                                                >{$t("Shortened", "Gekürzt")}</span
+                                            >
                                         {/if}
                                     </td>
                                     <td>
@@ -163,8 +168,8 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>Source</th>
-                                <th>Alt Text</th>
+                                <th>{$t("Source", "Quelle")}</th>
+                                <th>{$t("Alt Text", "Alternativtext")}</th>
                                 <th>Tracking</th>
                             </tr>
                         </thead>
@@ -178,12 +183,16 @@
                                             <small>{image.alt_text || "Present"}</small>
                                         {:else}
                                             <i class="bi bi-x-circle text-warning me-1"></i>
-                                            <small class="text-muted">Missing</small>
+                                            <small class="text-muted"
+                                                >{$t("Missing", "Fehlt")}</small
+                                            >
                                         {/if}
                                     </td>
                                     <td>
                                         {#if image.is_tracking_pixel}
-                                            <span class="badge bg-info">Tracking Pixel</span>
+                                            <span class="badge bg-info"
+                                                >{$t("Tracking Pixel", "Tracking-Pixel")}</span
+                                            >
                                         {:else}
                                             -
                                         {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import { theme } from "$lib/stores/theme";
 
     interface Props {
@@ -45,14 +46,15 @@
             class:btn-outline-primary={$theme === "light"}
             class:btn-primary={$theme !== "light"}
             onclick={copyToClipboard}
-            title="Copy to clipboard"
+            title={$t("Copy to clipboard", "In die Zwischenablage kopieren")}
         >
             <i class={copied ? "bi bi-check2" : "bi bi-clipboard"}></i>
         </button>
     </div>
     {#if copied}
         <small class="text-success d-block mt-2 text-center">
-            <i class="bi bi-check2"></i> Copied to clipboard!
+            <i class="bi bi-check2"></i>
+            {$t("Copied to clipboard!", "In die Zwischenablage kopiert.")}
         </small>
     {/if}
 </div>

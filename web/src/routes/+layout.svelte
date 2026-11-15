@@ -7,6 +7,7 @@
 
     import Logo from "$lib/components/Logo.svelte";
     import { appConfig } from "$lib/stores/config";
+    import { language, t } from "$lib/stores/language";
     import { theme } from "$lib/stores/theme";
     import { onMount } from "svelte";
 
@@ -37,18 +38,26 @@
                     <img src={$appConfig.custom_logo_url} alt="Logo" style="height: 25px;" />
                 {:else}
                     <i class="bi bi-envelope-check me-2"></i>
-                    <Logo color={$theme === "light" ? "black" : "white"} />
+                    Deliver Zenmail
                 {/if}
             </a>
-            <div>
-                <span class="d-none d-md-inline navbar-text text-primary small">
-                    Open-Source Email Deliverability Tester
-                </span>
+            <div class="d-flex align-items-center">
+                <label for="site-language" class="visually-hidden"
+                    >{$t("Language", "Sprache")}</label
+                >
+                <select
+                    id="site-language"
+                    class="form-select form-select-sm w-auto"
+                    bind:value={$language}
+                >
+                    <option lang="de" value="de">Deutsch</option>
+                    <option lang="en" value="en">English</option>
+                </select>
                 <button
                     class="btn btn-link ms-auto {$theme == 'light' ? 'text-dark' : 'text-light'}"
                     onclick={toggleTheme}
-                    aria-label="Toggle theme"
-                    title="Toggle theme"
+                    aria-label={$t("Toggle color mode", "Farbschema wechseln")}
+                    title={$t("Toggle color mode", "Farbschema wechseln")}
                 >
                     <i class="bi bi-{$theme === 'light' ? 'moon-stars-fill' : 'sun-fill'}"></i>
                 </button>
@@ -62,9 +71,11 @@
 
     <footer
         id="footer-classic"
-        class="px-4 px-md-5 py-2 bg-tertiary d-flex justify-content-between"
+        class="px-4 px-md-5 py-2 bg-tertiary d-flex flex-wrap gap-2 justify-content-between"
     >
-        <a href="https://happydeliver.org/" target="_blank">Powered by happyDeliver</a>
+        <a href="https://happydeliver.org/"
+            >{$t("Based on happyDeliver", "Basiert auf happyDeliver")}</a
+        >
         <ul class="d-flex footer-nav">
             <li>
                 <a
@@ -74,7 +85,11 @@
                     API
                 </a>
             </li>
-            <li><a href="https://git.happydomain.org/happydeliver" target="_blank">Git</a></li>
+            <li>
+                <a href="https://github.com/tamaga3131400/happydeliver/tree/deliver-zenmail">
+                    {$t("Source code (AGPL v3)", "Quellcode (AGPL v3)")}
+                </a>
+            </li>
             <li><a href="https://feedback.happydeliver.org/" target="_blank">Feedback</a></li>
         </ul>
     </footer>
@@ -165,7 +180,7 @@
 
 <style>
     footer {
-        border-top: 3px solid #9332bb;
+        border-top: 3px solid #0f625e;
     }
 
     footer a {

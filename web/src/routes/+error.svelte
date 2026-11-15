@@ -1,30 +1,31 @@
 <script lang="ts">
     import { page } from "$app/state";
+    import { t } from "$lib/stores/language";
     import { ErrorDisplay } from "$lib/components";
 
     let status = $derived(page.status);
-    let message = $derived(page.error?.message || "An unexpected error occurred");
+    let message = $derived(page.error?.message);
 
     function getErrorTitle(status: number): string {
         switch (status) {
             case 404:
-                return "Page Not Found";
+                return $t("Page Not Found", "Seite nicht gefunden");
             case 403:
-                return "Access Denied";
+                return $t("Access Denied", "Zugriff verweigert");
             case 429:
-                return "Too Many Requests";
+                return $t("Too Many Requests", "Zu viele Anfragen");
             case 500:
-                return "Server Error";
+                return $t("Server Error", "Serverfehler");
             case 503:
-                return "Service Unavailable";
+                return $t("Service Unavailable", "Dienst nicht verfügbar");
             default:
-                return "Something Went Wrong";
+                return $t("Something Went Wrong", "Ein Fehler ist aufgetreten");
         }
     }
 </script>
 
 <svelte:head>
-    <title>{status} - {getErrorTitle(status)} | happyDeliver</title>
+    <title>{status} - {getErrorTitle(status)} · Deliver Zenmail</title>
 </svelte:head>
 
 <div class="container py-5">

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { ScoreSummary } from "$lib/api/types.gen";
     import { theme } from "$lib/stores/theme";
     import GradeDisplay from "./GradeDisplay.svelte";
@@ -50,7 +51,9 @@
                 {getScoreLabel(grade)}
             {/if}
         </h3>
-        <p class="text-muted mb-4">Overall Deliverability Score</p>
+        <p class="text-muted mb-4">
+            {$t("Overall Deliverability Score", "Gesamtbewertung der Zustellbarkeit")}
+        </p>
 
         {#if summary}
             <div class="row g-3 text-start">
@@ -77,7 +80,9 @@
                                 grade={summary.authentication_grade}
                                 score={summary.authentication_score}
                             />
-                            <small class="text-muted d-block">Authentication</small>
+                            <small class="text-muted d-block"
+                                >{$t("Authentication", "Authentifizierung")}</small
+                            >
                         </div>
                     </a>
                 </div>
@@ -92,7 +97,9 @@
                                 grade={summary.blacklist_grade}
                                 score={summary.blacklist_score}
                             />
-                            <small class="text-muted d-block">Blacklists</small>
+                            <small class="text-muted d-block"
+                                >{$t("Blacklists", "Sperrlisten")}</small
+                            >
                         </div>
                     </a>
                 </div>
@@ -107,7 +114,7 @@
                                 grade={summary.header_grade}
                                 score={summary.header_score}
                             />
-                            <small class="text-muted d-block">Headers</small>
+                            <small class="text-muted d-block">{$t("Headers", "Kopfzeilen")}</small>
                         </div>
                     </a>
                 </div>
@@ -119,7 +126,9 @@
                             class:bg-secondary={$theme !== "light"}
                         >
                             <GradeDisplay grade={summary.spam_grade} score={summary.spam_score} />
-                            <small class="text-muted d-block">Spam Score</small>
+                            <small class="text-muted d-block"
+                                >{$t("Spam Score", "Spam-Bewertung")}</small
+                            >
                         </div>
                     </a>
                 </div>
@@ -134,7 +143,7 @@
                                 grade={summary.content_grade}
                                 score={summary.content_score}
                             />
-                            <small class="text-muted d-block">Content</small>
+                            <small class="text-muted d-block">{$t("Content", "Inhalt")}</small>
                         </div>
                     </a>
                 </div>

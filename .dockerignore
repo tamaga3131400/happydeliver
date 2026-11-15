@@ -8,6 +8,10 @@
 
 # Build artifacts
 happyDeliver
+web/node_modules/
+web/.svelte-kit/
+web/build/
+web/src/lib/api/
 *.db
 *.sqlite
 *.sqlite3

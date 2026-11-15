@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { RspamdResult } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -17,8 +18,7 @@
 
     const effectiveAction = $derived.by(() => {
         const rejectThreshold = rspamd.threshold > 0 ? rspamd.threshold : 15;
-        if (rspamd.score >= rejectThreshold)
-            return { label: "Reject", cls: "bg-danger" };
+        if (rspamd.score >= rejectThreshold) return { label: "Reject", cls: "bg-danger" };
         if (rspamd.score >= RSPAMD_ADD_HEADER_THRESHOLD)
             return { label: "Add header", cls: "bg-warning text-dark" };
         if (rspamd.score >= RSPAMD_GREYLIST_THRESHOLD)
@@ -32,7 +32,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-shield-exclamation me-2"></i>
-                rspamd Analysis
+                {$t("rspamd Analysis", "rspamd-Analyse")}
             </span>
             <span>
                 {#if rspamd.deliverability_score !== undefined}
@@ -49,19 +49,19 @@
     <div class="card-body">
         <div class="row mb-3">
             <div class="col-md-4">
-                <strong>Score:</strong>
+                <strong>{$t("Score:", "Punktzahl")}</strong>
                 <span class={rspamd.is_spam ? "text-danger" : "text-success"}>
                     {rspamd.score.toFixed(2)} / {rspamd.threshold.toFixed(1)}
                 </span>
             </div>
             <div class="col-md-4">
-                <strong>Classified as:</strong>
+                <strong>{$t("Classified as:", "Einstufung")}</strong>
                 <span class="badge {rspamd.is_spam ? 'bg-danger' : 'bg-success'} ms-2">
                     {rspamd.is_spam ? "SPAM" : "HAM"}
                 </span>
             </div>
             <div class="col-md-4">
-                <strong>Action:</strong>
+                <strong>{$t("Action:", "Aktion")}</strong>
                 <span class="badge {effectiveAction.cls} ms-2">
                     {effectiveAction.label}
                 </span>
@@ -75,8 +75,8 @@
                         <thead>
                             <tr>
                                 <th>Symbol</th>
-                                <th class="text-end">Score</th>
-                                <th>Parameters</th>
+                                <th class="text-end">{$t("Score", "Punktzahl")}</th>
+                                <th>{$t("Parameters", "Parameter")}</th>
                             </tr>
                         </thead>
                         <tbody>

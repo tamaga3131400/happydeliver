@@ -1,5 +1,16 @@
 # happyDeliver - Email Deliverability Tester
 
+**Deliver Zenmail** is a modified version of happyDeliver. On 15 November 2026,
+this fork introduced the Deliver Zenmail branding and a German language option.
+It is distributed under the GNU Affero General Public License v3.0 or later.
+See [LICENSE](LICENSE) and the [original happyDeliver project](https://github.com/happyDomain/happydeliver).
+
+To build the Deliver Zenmail image with the happyDeliver 1.2.0 runtime:
+
+```sh
+docker build -f docker/Dockerfile.deliver-zenmail -t deliver-zenmail .
+```
+
 ![banner](banner.webp)
 
 An open-source email deliverability testing platform that analyzes test emails and provides detailed deliverability reports with scoring.

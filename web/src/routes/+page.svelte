@@ -3,142 +3,176 @@
 
     import { createTest as apiCreateTest } from "$lib/api";
     import { FeatureCard, HowItWorksStep } from "$lib/components";
+    import { language, t } from "$lib/stores/language";
     import { appConfig } from "$lib/stores/config";
 
     let loading = $state(false);
-    let error = $state<string | null>(null);
+    let error = $state(false);
 
     async function createTest() {
         loading = true;
-        error = null;
+        error = false;
 
         try {
             const response = await apiCreateTest();
             if (response.data) {
-                goto(`/test/${response.data.id}`);
+                await goto(`/test/${response.data.id}`);
+            } else {
+                error = true;
             }
         } catch (err) {
-            error = err instanceof Error ? err.message : "Failed to create test";
+            console.error(err);
+            error = true;
+        } finally {
             loading = false;
         }
     }
 
     function getRetentionTimeText(): string {
-        if (!$appConfig.report_retention) return "ever";
+        if (!$appConfig.report_retention) return $t("indefinitely", "unbefristet");
 
-        const seconds = $appConfig.report_retention / 1000000000;
-        const days = Math.floor(seconds / 86400);
-        const weeks = Math.floor(days / 7);
-        const months = Math.floor(days / 30);
-
-        if (months >= 1) {
-            return months === 1 ? "1 month" : `${months} months`;
-        } else if (weeks >= 1) {
-            return weeks === 1 ? "1 week" : `${weeks} weeks`;
-        } else if (days >= 1) {
-            return days === 1 ? "1 day" : `${days} days`;
-        } else {
-            const hours = Math.floor(seconds / 3600);
-            return hours === 1 ? "1 hour" : `${hours} hours`;
-        }
+        const hours = Math.floor($appConfig.report_retention / 3_600_000_000_000);
+        const unit = hours >= 720 ? "month" : hours >= 168 ? "week" : hours >= 24 ? "day" : "hour";
+        const divisor = { month: 720, week: 168, day: 24, hour: 1 }[unit];
+        return new Intl.NumberFormat($language, {
+            style: "unit",
+            unit,
+            unitDisplay: "long",
+        }).format(Math.floor(hours / divisor));
     }
 
     const features = $derived([
         {
             icon: "bi-shield-check",
-            title: "Authentication",
-            description:
+            title: $t("Authentication", "Authentifizierung"),
+            description: $t(
                 "SPF, DKIM, DMARC, and BIMI validation with detailed results and recommendations.",
+                "Prüft SPF, DKIM, DMARC und BIMI und zeigt Ergebnisse und Empfehlungen.",
+            ),
             variant: "primary" as const,
         },
         {
             icon: "bi-building-check",
-            title: "BIMI Support",
-            description:
+            title: $t("BIMI Support", "BIMI-Unterstützung"),
+            description: $t(
                 "Brand Indicators for Message Identification - verify your brand logo configuration.",
+                "Überprüft die Konfiguration des Logos, das bei Empfängern angezeigt werden kann.",
+            ),
             variant: "info" as const,
         },
         {
             icon: "bi-link-45deg",
-            title: "ARC Verification",
-            description:
+            title: $t("ARC Verification", "ARC-Prüfung"),
+            description: $t(
                 "Authenticated Received Chain validation for forwarded emails and mailing lists.",
+                "Prüft die Authentifizierungskette bei Weiterleitungen und Mailinglisten.",
+            ),
             variant: "primary" as const,
         },
         {
             icon: "bi-check2-circle",
-            title: "Domain Alignment",
-            description:
+            title: $t("Domain Alignment", "Domain-Übereinstimmung"),
+            description: $t(
                 "Verify alignment between From, Return-Path, and DKIM domains for DMARC compliance.",
+                "Prüft für DMARC, ob die Absenderdomain mit der SPF- oder DKIM-Domain übereinstimmt.",
+            ),
             variant: "success" as const,
         },
         {
             icon: "bi-globe",
-            title: "DNS Records",
-            description:
+            title: $t("DNS Records", "DNS-Einträge"),
+            description: $t(
                 "Verify PTR, MX, SPF, DKIM, DMARC, and BIMI records are properly configured.",
+                "Prüft die DNS-Einträge für PTR, MX, SPF, DKIM, DMARC und BIMI.",
+            ),
             variant: "success" as const,
         },
         {
             icon: "bi-bug",
-            title: "Spam Score",
-            description: "SpamAssassin analysis with detailed test results and scoring.",
+            title: $t("Spam Score", "Spam-Bewertung"),
+            description: $t(
+                "SpamAssassin analysis with detailed test results and scoring.",
+                "Analysiert die Nachricht mit SpamAssassin und zeigt die Ergebnisse im Detail.",
+            ),
             variant: "warning" as const,
         },
         {
             icon: "bi-list-check",
-            title: "Blacklists",
-            description: "Check if your IP is listed in major DNS-based blacklists (RBLs).",
+            title: $t("Blacklists", "Sperrlisten"),
+            description: $t(
+                "Check if your IP is listed in major DNS-based blacklists (RBLs).",
+                "Prüft, ob deine IP-Adresse auf bekannten DNS-Sperrlisten (RBLs) steht.",
+            ),
             variant: "danger" as const,
         },
         {
             icon: "bi-card-heading",
-            title: "Header Quality",
-            description: "Validate required headers, check for missing fields and alignment.",
+            title: $t("Header Quality", "E-Mail-Kopfzeilen"),
+            description: $t(
+                "Validate required headers, check for missing fields and alignment.",
+                "Prüft Pflichtfelder und die Übereinstimmung der Angaben in den Kopfzeilen.",
+            ),
             variant: "secondary" as const,
         },
         {
             icon: "bi-file-text",
-            title: "Content Analysis",
-            description: "HTML structure, link validation, image analysis, and more.",
+            title: $t("Content Analysis", "Inhaltsanalyse"),
+            description: $t(
+                "HTML structure, link validation, image analysis, and more.",
+                "Prüft HTML-Aufbau, Links und Bilder deiner E-Mail.",
+            ),
             variant: "info" as const,
         },
         {
             icon: "bi-bar-chart",
-            title: "Detailed Scoring",
-            description:
+            title: $t("Detailed Scoring", "Detaillierte Bewertung"),
+            description: $t(
                 "A to F deliverability grade with breakdown by category and recommendations.",
+                "Bewertet die Zustellbarkeit von A bis F und gibt Empfehlungen je Kategorie.",
+            ),
             variant: "primary" as const,
         },
         {
             icon: "bi-lock",
-            title: "Privacy First",
-            description: `Self-hosted solution, your data never leaves your infrastructure. Reports retained for ${getRetentionTimeText()}.`,
+            title: $t("Privacy First", "Datenschutz"),
+            description: $t(
+                `Reports are stored on this server for: ${getRetentionTimeText()}.`,
+                `Speicherdauer der Berichte auf diesem Server: ${getRetentionTimeText()}.`,
+            ),
             variant: "success" as const,
         },
     ]);
 
-    const steps = [
+    const steps = $derived([
         {
             step: 1,
-            title: "Create Test",
-            description: "Click the button to generate a unique test email address.",
+            title: $t("Create Test", "Test erstellen"),
+            description: $t(
+                "Click the button to generate a unique test email address.",
+                "Erstelle eine eindeutige E-Mail-Adresse für deinen Test.",
+            ),
         },
         {
             step: 2,
-            title: "Send Email",
-            description: "Send a test email from your mail server to the provided address.",
+            title: $t("Send Email", "E-Mail senden"),
+            description: $t(
+                "Send a test email from your mail server to the provided address.",
+                "Sende eine Testmail über deinen Mailserver an diese Adresse.",
+            ),
         },
         {
             step: 3,
-            title: "View Results",
-            description: "Get instant detailed analysis with actionable recommendations.",
+            title: $t("View Results", "Ergebnisse ansehen"),
+            description: $t(
+                "Get instant detailed analysis with actionable recommendations.",
+                "Öffne den Bericht mit konkreten Empfehlungen.",
+            ),
         },
-    ];
+    ]);
 </script>
 
 <svelte:head>
-    <title>happyDeliver. Test Your Email Deliverability.</title>
+    <title>Deliver Zenmail · {$t("Email Deliverability Test", "E-Mail-Zustelltest")}</title>
 </svelte:head>
 
 <!-- Hero Section -->
@@ -146,29 +180,36 @@
     <div class="container py-5">
         <div class="row align-items-center">
             <div class="col-lg-8 mx-auto text-center fade-in">
-                <h1 class="display-3 fw-bold mb-4">Test Your Email Deliverability</h1>
+                <h1 class="display-3 fw-bold mb-4">
+                    {$t("Test Your Email Deliverability", "E-Mail-Zustellbarkeit prüfen")}
+                </h1>
                 <p class="lead mb-4 opacity-90">
-                    Get detailed insights into your email configuration, authentication, spam score,
-                    and more. Open-source, self-hosted, and privacy-focused.
+                    {$t(
+                        "Get detailed insights into your email configuration, authentication, spam score, and more. Open-source, self-hosted, and privacy-focused.",
+                        "Prüfe die Authentifizierung und den Spam-Wert deiner E-Mails. Der Bericht zeigt, was du an deiner Mailkonfiguration verbessern kannst.",
+                    )}
                 </p>
                 <button
-                    class="btn btn-success btn-lg px-5 py-3 shadow cta-button"
+                    class="btn btn-lg px-4 px-sm-5 py-3 shadow cta-button"
                     onclick={createTest}
                     disabled={loading}
                 >
                     {#if loading}
                         <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating Test...
+                        {$t("Creating Test...", "Test wird erstellt …")}
                     {:else}
                         <i class="bi bi-envelope-plus me-2"></i>
-                        Start Free Test
+                        {$t("Start Free Test", "Kostenlosen Test starten")}
                     {/if}
                 </button>
 
                 {#if error}
                     <div class="alert alert-danger mt-4 d-inline-block" role="alert">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        {error}
+                        {$t(
+                            "Could not create the test. Please try again.",
+                            "Der Test konnte nicht erstellt werden. Bitte versuche es erneut.",
+                        )}
                     </div>
                 {/if}
             </div>
@@ -181,10 +222,14 @@
     <div class="container py-4">
         <div class="row text-center mb-5">
             <div class="col-lg-8 mx-auto">
-                <h2 class="display-5 fw-bold mb-3">Comprehensive Email Analysis</h2>
+                <h2 class="display-5 fw-bold mb-3">
+                    {$t("Comprehensive Email Analysis", "E-Mails im Detail analysieren")}
+                </h2>
                 <p class="text-muted">
-                    Your favorite deliverability tester, open-source and self-hostable for complete
-                    privacy and control.
+                    {$t(
+                        "Your favorite deliverability tester, open-source and self-hostable for complete privacy and control.",
+                        "Prüfe, welche Einstellungen deinem Mailserver bei der Zustellung helfen und welche Probleme verursachen können.",
+                    )}
                 </p>
             </div>
         </div>
@@ -199,14 +244,19 @@
     </div>
 </section>
 
-<!-- How It Works -->
+<!-- {$t("How It Works", "So funktioniert der Test")} -->
 <section class="bg-light py-5" id="steps">
     <div class="container py-4">
         <div class="row text-center mb-5">
             <div class="col-lg-8 mx-auto">
-                <h2 class="display-5 fw-bold mb-3">How It Works</h2>
+                <h2 class="display-5 fw-bold mb-3">
+                    {$t("How It Works", "So funktioniert der Test")}
+                </h2>
                 <p class="text-muted">
-                    Simple three-step process to test your email deliverability
+                    {$t(
+                        "Simple three-step process to test your email deliverability",
+                        "In drei Schritten zum Zustellbericht",
+                    )}
                 </p>
             </div>
         </div>
@@ -221,28 +271,28 @@
 
         <div class="text-center mt-5">
             <button
-                class="btn btn-primary btn-lg px-5 py-3"
+                class="btn btn-primary btn-lg px-4 px-sm-5 py-3"
                 onclick={createTest}
                 disabled={loading}
             >
                 {#if loading}
                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Creating Test...
+                    {$t("Creating Test...", "Test wird erstellt …")}
                 {:else}
                     <i class="bi bi-rocket-takeoff me-2"></i>
-                    Get Started Now
+                    {$t("Get Started Now", "Jetzt starten")}
                 {/if}
             </button>
         </div>
 
-        <div class="text-center mt-4">
-            <a href="/domain" class="btn btn-secondary btn-lg me-2">
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a href="/domain" class="btn btn-secondary btn-lg">
                 <i class="bi bi-globe me-2"></i>
-                Test Domain Only
+                {$t("Test Domain Only", "Nur Domain prüfen")}
             </a>
             <a href="/blacklist" class="btn btn-secondary btn-lg">
                 <i class="bi bi-shield-exclamation me-2"></i>
-                Check IP Blacklist
+                {$t("Check IP Blacklist", "IP auf Sperrlisten prüfen")}
             </a>
         </div>
     </div>
@@ -251,32 +301,25 @@
 <style>
     .hero {
         background:
-            linear-gradient(135deg, rgba(102, 126, 234, 0.85) 0%, rgba(118, 75, 162, 0.9) 100%),
-            url("/img/report.webp");
-        background-size: cover;
-        background-position: center 25%;
-        background-repeat: no-repeat;
-        color: white;
+            radial-gradient(ellipse at 84% 8%, #237068 0%, transparent 54%),
+            linear-gradient(125deg, #12313c, #164e50 58%, #1a6058);
+        color: #f6fcfa;
     }
 
-    .hero h1,
-    .hero p {
-        text-shadow: black 0 0 1px;
-    }
-
-    /* Dark mode hero adjustments */
     :global([data-bs-theme="dark"]) .hero {
         background:
-            linear-gradient(135deg, rgba(50, 65, 140, 0.85) 0%, rgba(65, 40, 95, 0.9) 100%),
-            url("/img/report.webp");
-        background-size: cover;
-        background-position: center 25%;
-        background-repeat: no-repeat;
+            radial-gradient(ellipse at 84% 8%, #174c48 0%, transparent 54%),
+            linear-gradient(125deg, #102631, #123b3d 58%, #154740);
     }
 
-    :global([data-bs-theme="dark"]) .hero h1,
-    :global([data-bs-theme="dark"]) .hero p {
-        text-shadow: black 0 0 3px;
+    .hero h1 {
+        text-wrap: balance;
+    }
+
+    .hero .lead {
+        max-width: 36rem;
+        margin-inline: auto;
+        color: #d8ece8;
     }
 
     /* Dark mode section background */
@@ -300,46 +343,24 @@
     }
 
     .cta-button {
-        position: relative;
-        animation: pulse 2s infinite;
-        transition: transform 0.2s ease;
+        --bs-btn-color: #203137;
+        --bs-btn-bg: #f4ca79;
+        --bs-btn-border-color: #f4ca79;
+        --bs-btn-hover-color: #152c32;
+        --bs-btn-hover-bg: #ffe0a1;
+        --bs-btn-hover-border-color: #ffe0a1;
+        --bs-btn-focus-shadow-rgb: 244, 202, 121;
+        --bs-btn-active-color: #203137;
+        --bs-btn-active-bg: #e5b662;
+        --bs-btn-active-border-color: #e5b662;
+        --bs-btn-disabled-color: #203137;
+        --bs-btn-disabled-bg: #f4ca79;
+        --bs-btn-disabled-border-color: #f4ca79;
     }
 
-    .cta-button:hover:not(:disabled) {
-        animation: none;
-        transform: scale(1.05);
-    }
-
-    .cta-button:disabled {
-        animation: none;
-    }
-
-    @keyframes pulse {
-        0%,
-        100% {
-            transform: scale(1);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    @media (prefers-reduced-motion: reduce) {
+        .fade-in {
+            animation: none;
         }
-        50% {
-            transform: scale(1.08);
-            box-shadow: 0 1rem 2rem rgba(25, 135, 84, 0.5);
-        }
-    }
-
-    @keyframes pulse-dark {
-        0%,
-        100% {
-            transform: scale(1);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
-        }
-        50% {
-            transform: scale(1.08);
-            box-shadow: 0 1rem 2rem rgba(25, 135, 84, 0.7);
-        }
-    }
-
-    /* Dark mode pulse animation */
-    :global([data-bs-theme="dark"]) .cta-button {
-        animation: pulse-dark 2s infinite;
     }
 </style>

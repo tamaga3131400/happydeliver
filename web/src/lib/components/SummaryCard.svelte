@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { Report } from "$lib/api/types.gen";
     import GradeDisplay from "./GradeDisplay.svelte";
 
@@ -424,7 +425,11 @@
 
         // One-click unsubscribe check
         const unsubscribeMethods = report.content_analysis?.unsubscribe_methods;
-        if (unsubscribeMethods && unsubscribeMethods.length > 0 && !unsubscribeMethods.includes("one-click")) {
+        if (
+            unsubscribeMethods &&
+            unsubscribeMethods.length > 0 &&
+            !unsubscribeMethods.includes("one-click")
+        ) {
             segments.push({ text: ". This email could benefit from " });
             segments.push({
                 text: "one-click unsubscribe",
@@ -529,7 +534,7 @@
     <div class="card-body p-4">
         <h5 class="card-title mb-3">
             <i class="bi bi-card-text me-2"></i>
-            Summary
+            {$t("Summary", "Zusammenfassung")}
         </h5>
         <p class="card-text text-muted" class:mb-0={!children} style="line-height: 1.8;">
             {#each summarySegments as segment}

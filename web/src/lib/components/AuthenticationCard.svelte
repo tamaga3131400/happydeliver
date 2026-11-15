@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { AuthenticationResults, DnsResults } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -81,7 +82,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-shield-check me-2"></i>
-                Authentication
+                {$t("Authentication", "Authentifizierung")}
             </span>
             <span>
                 {#if authenticationScore !== undefined}
@@ -107,7 +108,7 @@
                         )} {getAuthResultClass(authentication.iprev.result, true)} me-2 fs-5"
                     ></i>
                     <div>
-                        <strong>IP Reverse DNS</strong>
+                        <strong>{$t("IP Reverse DNS", "Reverse-DNS der IP-Adresse")}</strong>
                         <span
                             class="text-uppercase ms-2 {getAuthResultClass(
                                 authentication.iprev.result,
@@ -118,13 +119,13 @@
                         </span>
                         {#if authentication.iprev.ip}
                             <div class="small">
-                                <strong>IP Address:</strong>
+                                <strong>{$t("IP Address:", "IP-Adresse")}</strong>
                                 <span class="text-muted">{authentication.iprev.ip}</span>
                             </div>
                         {/if}
                         {#if authentication.iprev.hostname}
                             <div class="small">
-                                <strong>Hostname:</strong>
+                                <strong>{$t("Hostname:", "Hostname")}</strong>
                                 <span class="text-muted">{authentication.iprev.hostname}</span>
                             </div>
                         {/if}
@@ -162,7 +163,7 @@
                         </span>
                         {#if authentication.spf.domain}
                             <div class="small">
-                                <strong>Domain:</strong>
+                                <strong>{$t("Domain:", "Domain")}</strong>
                                 <span class="text-muted">{authentication.spf.domain}</span>
                             </div>
                         {/if}
@@ -187,7 +188,10 @@
                             {getAuthResultText("missing")}
                         </span>
                         <div class="text-muted small">
-                            SPF record is required for proper email authentication
+                            {$t(
+                                "SPF record is required for proper email authentication",
+                                "Für die SPF-Prüfung ist ein SPF-Eintrag erforderlich.",
+                            )}
                         </div>
                     </div>
                 {/if}
@@ -215,13 +219,13 @@
                             </span>
                             {#if dkim.domain}
                                 <div class="small">
-                                    <strong>Domain:</strong>
+                                    <strong>{$t("Domain:", "Domain")}</strong>
                                     <span class="text-muted">{dkim.domain}</span>
                                 </div>
                             {/if}
                             {#if dkim.selector}
                                 <div class="small">
-                                    <strong>Selector:</strong>
+                                    <strong>{$t("Selector:", "Selektor")}</strong>
                                     <span class="text-muted">{dkim.selector}</span>
                                 </div>
                             {/if}
@@ -249,7 +253,10 @@
                             {getAuthResultText("missing")}
                         </span>
                         <div class="text-muted small">
-                            DKIM signature is required for proper email authentication
+                            {$t(
+                                "DKIM signature is required for proper email authentication",
+                                "Für die DKIM-Prüfung ist eine DKIM-Signatur erforderlich.",
+                            )}
                         </div>
                     </div>
                 </div>
@@ -285,14 +292,14 @@
                         </span>
                         {#if authentication.x_google_dkim.domain}
                             <div class="small">
-                                <strong>Domain:</strong>
+                                <strong>{$t("Domain:", "Domain")}</strong>
                                 <span class="text-muted">{authentication.x_google_dkim.domain}</span
                                 >
                             </div>
                         {/if}
                         {#if authentication.x_google_dkim.selector}
                             <div class="small">
-                                <strong>Selector:</strong>
+                                <strong>{$t("Selector:", "Selektor")}</strong>
                                 <span class="text-muted"
                                     >{authentication.x_google_dkim.selector}</span
                                 >
@@ -340,7 +347,7 @@
                         </span>
                         {#if authentication.x_aligned_from.domain}
                             <div class="small">
-                                <strong>Domain:</strong>
+                                <strong>{$t("Domain:", "Domain")}</strong>
                                 <span class="text-muted"
                                     >{authentication.x_aligned_from.domain}</span
                                 >
@@ -381,13 +388,13 @@
                         </span>
                         {#if authentication.dmarc.domain}
                             <div class="small">
-                                <strong>Domain:</strong>
+                                <strong>{$t("Domain:", "Domain")}</strong>
                                 <span class="text-muted">{authentication.dmarc.domain}</span>
                             </div>
                         {/if}
                         {#snippet DMARCPolicy(policy: string)}
                             <div class="small">
-                                <strong>Policy:</strong>
+                                <strong>{$t("Policy:", "Richtlinie")}</strong>
                                 <span
                                     class="fw-bold"
                                     class:text-success={policy == "reject"}
@@ -433,7 +440,10 @@
                             {getAuthResultText("missing")}
                         </span>
                         <div class="text-muted small">
-                            DMARC policy is required for proper email authentication
+                            {$t(
+                                "DMARC policy is required for proper email authentication",
+                                "Für die DMARC-Prüfung ist ein DMARC-Eintrag erforderlich.",
+                            )}
                         </div>
                     </div>
                 {/if}
@@ -488,7 +498,9 @@
                     <i class="bi bi-info-circle text-muted me-2 fs-5"></i>
                     <div>
                         <strong>BIMI</strong>
-                        <span class="text-uppercase ms-2 text-muted"> Optional </span>
+                        <span class="text-uppercase ms-2 text-muted">
+                            {$t("Optional", "Optional")}
+                        </span>
                         <div class="text-muted small">
                             Brand Indicators for Message Identification (optional enhancement)
                         </div>

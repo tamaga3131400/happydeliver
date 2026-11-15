@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { BlacklistCheck, ReceivedHop } from "$lib/api/types.gen";
     import { getScoreColorClass } from "$lib/score";
     import { theme } from "$lib/stores/theme";
@@ -20,7 +21,7 @@
         <h4 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
                 <i class="bi bi-shield-exclamation me-2"></i>
-                Blacklist Checks
+                {$t("Blacklist Checks", "Sperrlistenprüfung")}
             </span>
             <span>
                 {#if blacklistScore !== undefined}

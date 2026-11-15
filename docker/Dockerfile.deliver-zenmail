@@ -1,0 +1,22 @@
+FROM node:24-alpine AS web-build
+
+WORKDIR /src
+COPY api/ api/
+COPY web/ web/
+WORKDIR /src/web
+RUN npm ci && npm run generate:api && npm run build
+
+FROM golang:1.24-alpine AS app-build
+
+WORKDIR /src
+RUN apk add --no-cache ca-certificates git gcc musl-dev
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+COPY --from=web-build /src/web/build/ ./web/build/
+RUN go generate ./... && \
+    CGO_ENABLED=1 go build -trimpath -ldflags="-w -s" -o /out/happyDeliver ./cmd/happyDeliver
+
+FROM happydomain/happydeliver:1.2.0@sha256:8fad07c7c3e28d8836ecc9707fc07d458ed72990ec92e0ddc10bfcdea8736645
+
+COPY --from=app-build /out/happyDeliver /usr/local/bin/happyDeliver

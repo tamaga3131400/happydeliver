@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     interface Props {
         status: number;
         message?: string;
@@ -10,34 +11,52 @@
     function getErrorTitle(status: number): string {
         switch (status) {
             case 404:
-                return "Page Not Found";
+                return $t("Page Not Found", "Seite nicht gefunden");
             case 403:
-                return "Access Denied";
+                return $t("Access Denied", "Zugriff verweigert");
             case 429:
-                return "Too Many Requests";
+                return $t("Too Many Requests", "Zu viele Anfragen");
             case 500:
-                return "Server Error";
+                return $t("Server Error", "Serverfehler");
             case 503:
-                return "Service Unavailable";
+                return $t("Service Unavailable", "Dienst nicht verfügbar");
             default:
-                return "Something Went Wrong";
+                return $t("Something Went Wrong", "Ein Fehler ist aufgetreten");
         }
     }
 
     function getErrorDescription(status: number): string {
         switch (status) {
             case 404:
-                return "The page you're looking for doesn't exist or has been moved.";
+                return $t(
+                    "The page you're looking for doesn't exist or has been moved.",
+                    "Diese Seite existiert nicht oder wurde verschoben.",
+                );
             case 403:
-                return "You don't have permission to access this resource.";
+                return $t(
+                    "You don't have permission to access this resource.",
+                    "Du hast keine Berechtigung für diese Ressource.",
+                );
             case 429:
-                return "You've made too many requests. Please wait a moment and try again.";
+                return $t(
+                    "You've made too many requests. Please wait a moment and try again.",
+                    "Warte einen Moment und versuche es erneut.",
+                );
             case 500:
-                return "Our server encountered an error while processing your request.";
+                return $t(
+                    "Our server encountered an error while processing your request.",
+                    "Der Server konnte die Anfrage nicht verarbeiten.",
+                );
             case 503:
-                return "The service is temporarily unavailable. Please try again later.";
+                return $t(
+                    "The service is temporarily unavailable. Please try again later.",
+                    "Der Dienst ist vorübergehend nicht verfügbar. Versuche es später erneut.",
+                );
             default:
-                return "An unexpected error occurred. Please try again.";
+                return $t(
+                    "An unexpected error occurred. Please try again.",
+                    "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.",
+                );
         }
     }
 
@@ -59,7 +78,6 @@
     }
 
     let defaultDescription = $derived(getErrorDescription(status));
-    let displayMessage = $derived(message || defaultDescription);
 </script>
 
 <div class="row justify-content-center">
@@ -91,14 +109,14 @@
             <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                 <a href="/" class="btn btn-primary btn-lg px-4">
                     <i class="bi bi-house-door me-2"></i>
-                    Go Home
+                    {$t("Go Home", "Zur Startseite")}
                 </a>
                 <button
                     class="btn btn-outline-primary btn-lg px-4"
                     onclick={() => window.history.back()}
                 >
                     <i class="bi bi-arrow-left me-2"></i>
-                    Go Back
+                    {$t("Go Back", "Zurück")}
                 </button>
             </div>
         {/if}
@@ -106,17 +124,21 @@
         <!-- Additional Help -->
         {#if status === 404 && showActions}
             <div class="mt-5">
-                <p class="text-muted small mb-2">Looking for something specific?</p>
+                <p class="text-muted small mb-2">
+                    {$t("Looking for something specific?", "Direkt zu")}
+                </p>
                 <div class="d-flex flex-wrap gap-2 justify-content-center">
-                    <a href="/" class="badge bg-light text-dark text-decoration-none">Home</a>
+                    <a href="/" class="badge bg-light text-dark text-decoration-none"
+                        >{$t("Home", "Startseite")}</a
+                    >
                     <a href="/#features" class="badge bg-light text-dark text-decoration-none">
-                        Features
+                        {$t("Features", "Funktionen")}
                     </a>
                     <a
                         href="https://github.com/happyDomain/happydeliver"
                         class="badge bg-light text-dark text-decoration-none"
                     >
-                        Documentation
+                        {$t("Documentation", "Dokumentation")}
                     </a>
                 </div>
             </div>

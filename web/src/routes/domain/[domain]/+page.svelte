@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import { page } from "$app/state";
     import { onMount } from "svelte";
 
@@ -46,7 +47,7 @@
 </script>
 
 <svelte:head>
-    <title>{domain} - Domain Test - happyDeliver</title>
+    <title>{domain} - {$t("Domain Test", "Domain-Test")} · Deliver Zenmail</title>
 </svelte:head>
 
 <div class="container py-5">
@@ -57,11 +58,11 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <h1 class="h2 mb-0">
                         <i class="bi bi-globe me-2"></i>
-                        Domain Analysis
+                        {$t("Domain Analysis", "Domain-Analyse")}
                     </h1>
                     <a href="/domain" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-2"></i>
-                        Test Another Domain
+                        {$t("Test Another Domain", "Weitere Domain prüfen")}
                     </a>
                 </div>
             </div>
@@ -71,10 +72,16 @@
                 <div class="card shadow-sm">
                     <div class="card-body text-center py-5">
                         <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                            <span class="visually-hidden">{$t("Loading...", "Wird geladen …")}</span
+                            >
                         </div>
                         <h3 class="h5">Analyzing {domain}...</h3>
-                        <p class="text-muted mb-0">Checking DNS records and configuration</p>
+                        <p class="text-muted mb-0">
+                            {$t(
+                                "Checking DNS records and configuration",
+                                "DNS-Einträge und Konfiguration werden geprüft …",
+                            )}
+                        </p>
                     </div>
                 </div>
             {:else if error}
@@ -83,11 +90,11 @@
                     <div class="card-body text-center py-5">
                         <i class="bi bi-exclamation-triangle text-danger" style="font-size: 4rem;"
                         ></i>
-                        <h3 class="h4 mt-4">Analysis Failed</h3>
+                        <h3 class="h4 mt-4">{$t("Analysis Failed", "Analyse fehlgeschlagen")}</h3>
                         <p class="text-muted mb-4">{error}</p>
                         <button class="btn btn-primary" onclick={analyzeDomain}>
                             <i class="bi bi-arrow-clockwise me-2"></i>
-                            Try Again
+                            {$t("Try Again", "Erneut versuchen")}
                         </button>
                     </div>
                 </div>
@@ -105,15 +112,26 @@
                                     {#if result.is_disposable}
                                         <div class="alert alert-warning mb-0 d-inline-block">
                                             <i class="bi bi-exclamation-triangle me-2"></i>
-                                            <strong>Disposable Email Provider Detected</strong>
+                                            <strong
+                                                >{$t(
+                                                    "Disposable Email Provider Detected",
+                                                    "Wegwerf-E-Mail-Anbieter erkannt",
+                                                )}</strong
+                                            >
                                             <p class="mb-0 mt-1 small">
-                                                This domain is a known temporary/disposable email
-                                                service. Emails from this domain may have lower
-                                                deliverability.
+                                                {$t(
+                                                    "This domain is a known temporary/disposable email service. Emails from this domain may have lower deliverability.",
+                                                    "Diese Domain gehört zu einem bekannten Anbieter temporärer E-Mail-Adressen. Nachrichten von dieser Domain können schwerer zustellbar sein.",
+                                                )}
                                             </p>
                                         </div>
                                     {:else}
-                                        <p class="text-muted mb-0">Domain Configuration Score</p>
+                                        <p class="text-muted mb-0">
+                                            {$t(
+                                                "Domain Configuration Score",
+                                                "Bewertung der Domain-Konfiguration",
+                                            )}
+                                        </p>
                                     {/if}
                                 </div>
                                 <div class="offset-md-3 col-md-3 text-center">
@@ -149,16 +167,20 @@
                         <div class="card-body">
                             <h3 class="h5 mb-3">
                                 <i class="bi bi-lightbulb me-2"></i>
-                                Want Complete Email Analysis?
+                                {$t(
+                                    "Want Complete Email Analysis?",
+                                    "Möchtest du die gesamte E-Mail prüfen?",
+                                )}
                             </h3>
                             <p class="mb-3">
-                                This domain-only test checks DNS configuration. For comprehensive
-                                deliverability testing including DKIM verification, content
-                                analysis, spam scoring, and blacklist checks:
+                                {$t(
+                                    "This domain-only test checks DNS configuration. For comprehensive deliverability testing including DKIM verification, content analysis, spam scoring, and blacklist checks:",
+                                    "Der Domain-Test prüft die DNS-Einstellungen. Der E-Mail-Test berücksichtigt zusätzlich DKIM, Inhalt, Spam-Wertung und Sperrlisten.",
+                                )}
                             </p>
                             <a href="/" class="btn btn-primary">
                                 <i class="bi bi-envelope-plus me-2"></i>
-                                Send a Test Email
+                                {$t("Send a Test Email", "Testmail senden")}
                             </a>
                         </div>
                     </div>
