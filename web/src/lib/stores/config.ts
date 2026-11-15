@@ -27,6 +27,7 @@ interface AppConfig {
     custom_logo_url?: string;
     rbls: string[];
     admin_enabled?: boolean;
+    operator?: { name: string; address?: string; hosting?: string };
 }
 
 const defaultConfig: AppConfig = {

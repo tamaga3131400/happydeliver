@@ -100,6 +100,10 @@
                 </li>
             {/if}
             <li><a href="https://github.com/tamaga3131400/happydeliver/issues" target="_blank">Feedback</a></li>
+            {#if $appConfig.operator}
+                <li><a href="/impressum/">Impressum</a></li>
+                <li><a href="/datenschutz/">{$t("Privacy", "Datenschutz")}</a></li>
+            {/if}
         </ul>
     </footer>
 

@@ -50,6 +50,13 @@ type Config struct {
 	SurveyURL       url.URL       // URL for user feedback survey
 	CustomLogoURL   string        // URL for custom logo image in the web UI
 	FeedsDir        string        // Directory for downloaded data feeds (tools)
+	Legal           LegalConfig
+}
+
+// LegalConfig holds the operator details shown on the imprint and privacy pages.
+// They are set on the server only, so personal data stays out of the repository.
+type LegalConfig struct {
+	Name, Address, Hosting string
 }
 
 // AdminConfig defines the server-side administration access.

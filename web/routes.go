@@ -64,6 +64,13 @@ func publicHead(cfg *config.Config) string {
 	if cfg.SurveyURL.Host != "" {
 		appConfig["survey_url"] = cfg.SurveyURL.String()
 	}
+	if cfg.Legal.Name != "" {
+		appConfig["operator"] = map[string]string{
+			"name":    cfg.Legal.Name,
+			"address": cfg.Legal.Address,
+			"hosting": cfg.Legal.Hosting,
+		}
+	}
 	if effective.CustomLogoURL != "" {
 		appConfig["custom_logo_url"] = effective.CustomLogoURL
 	}
@@ -97,6 +104,8 @@ func DeclareRoutes(cfg *config.Config, router *gin.Engine) {
 	router.GET("/test/:testid", serveOrReverse("/", cfg))
 	router.GET("/tools/", serveOrReverse("/", cfg))
 	router.GET("/tools/:tool", serveOrReverse("/", cfg))
+	router.GET("/impressum/", serveOrReverse("/", cfg))
+	router.GET("/datenschutz/", serveOrReverse("/", cfg))
 	router.GET("/favicon.png", func(c *gin.Context) { c.Writer.Header().Set("Cache-Control", "public, max-age=604800, immutable") }, serveOrReverse("", cfg))
 	router.GET("/img/*path", serveOrReverse("", cfg))
 
