@@ -181,7 +181,7 @@
         <div class="row align-items-center">
             <div class="col-lg-8 mx-auto text-center fade-in">
                 <h1 class="display-3 fw-bold mb-4">
-                    {$t("Test Your Email Deliverability", "E-Mail-Zustellbarkeit prüfen")}
+                    {$t("Test Your Email Deliverability", "Zustellbarkeit von E-Mails prüfen")}
                 </h1>
                 <p class="lead mb-4 opacity-90">
                     {$t(
