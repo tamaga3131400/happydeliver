@@ -171,17 +171,24 @@ func serveOrReverse(forced_url string, cfg *config.Config) gin.HandlerFunc {
 		return func(c *gin.Context) {
 			indexOnce.Do(func() {
 				v, _ := fs.ReadFile(_assets, "build/index.html")
+				indexScriptHashes = scriptHashes(string(v))
 
-				v2 := strings.Replace(strings.Replace(string(v), "</head>", `{{ .Head }}<meta property="og:url" content="{{ .RootURL }}"></head>`, 1), "</body>", "{{ .Body }}</body>", 1)
+				v2 := strings.Replace(strings.Replace(string(v), "</head>", `{{ .Head }}<meta property="og:url" content="{{ .RootURL }}"><link rel="canonical" href="{{ .Canonical }}"></head>`, 1), "</body>", "{{ .Body }}</body>", 1)
 
 				indexTpl = template.Must(template.New("index.html").Parse(v2))
 			})
 
+			// Custom HTML may load other resources, so the policy is only set without it.
+			if CustomHeadHTML == "" && CustomBodyHTML == "" {
+				c.Header("Content-Security-Policy", indexCSP(cfg))
+			}
+
 			// Serve template
 			if err := indexTpl.ExecuteTemplate(c.Writer, "index.html", map[string]string{
-				"Body":    CustomBodyHTML,
-				"Head":    publicHead(cfg),
-				"RootURL": fmt.Sprintf("https://%s/", html.EscapeString(c.Request.Host)),
+				"Body":      CustomBodyHTML,
+				"Head":      publicHead(cfg),
+				"RootURL":   fmt.Sprintf("https://%s/", html.EscapeString(c.Request.Host)),
+				"Canonical": fmt.Sprintf("https://%s%s", html.EscapeString(c.Request.Host), html.EscapeString(c.Request.URL.Path)),
 			}); err != nil {
 				log.Println("Unable to return index.html:", err.Error())
 			}

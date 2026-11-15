@@ -49,6 +49,7 @@ func RunServer(cfg *config.Config) error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.Default()
+	router.Use(securityHeaders)
 	var trustedProxies []string
 	for _, proxy := range strings.Split(cfg.TrustedProxies, ",") {
 		if proxy = strings.TrimSpace(proxy); proxy != "" {
