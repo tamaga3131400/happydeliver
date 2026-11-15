@@ -47,6 +47,7 @@ func declareFlags(o *Config) {
 	flag.StringVar(&o.Admin.PasswordFile, "admin-password-file", o.Admin.PasswordFile, "Read-only file containing the admin password")
 	flag.StringVar(&o.Admin.SettingsFile, "admin-settings-file", o.Admin.SettingsFile, "Persistent JSON file for runtime settings")
 	flag.StringVar(&o.Admin.Origin, "admin-origin", o.Admin.Origin, "Exact origin of the administration UI")
+	flag.StringVar(&o.FeedsDir, "feeds-dir", o.FeedsDir, "Directory for downloaded data feeds used by the tools")
 	flag.StringVar(&o.TrustedProxies, "trusted-proxies", o.TrustedProxies, "Comma-separated addresses of trusted HTTP reverse proxies")
 
 	// Others flags are declared in some other files likes sources, storages, ... when they need specials configurations

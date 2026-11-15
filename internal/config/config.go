@@ -49,6 +49,7 @@ type Config struct {
 	RateLimit       uint          // API rate limit (requests per second per IP)
 	SurveyURL       url.URL       // URL for user feedback survey
 	CustomLogoURL   string        // URL for custom logo image in the web UI
+	FeedsDir        string        // Directory for downloaded data feeds (tools)
 }
 
 // AdminConfig defines the server-side administration access.
@@ -83,6 +84,7 @@ func DefaultConfig() *Config {
 		DevProxy:        "",
 		Bind:            ":8080",
 		ReportRetention: MaxReportRetention,
+		FeedsDir:        "/var/lib/happydeliver/feeds",
 		RateLimit:       1, // is in fact 2 requests per 2 seconds per IP (default)
 		Database: DatabaseConfig{
 			Type: "sqlite",

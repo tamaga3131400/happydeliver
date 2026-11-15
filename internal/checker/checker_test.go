@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/netip"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 )
@@ -100,5 +101,47 @@ func TestExtServerPattern(t *testing.T) {
 	}
 	if strings.Join(got, ",") != "51.158.139.25,2001:db8::53,9.9.9.9" {
 		t.Error(got)
+	}
+}
+
+func TestTypoSuggestion(t *testing.T) {
+	for in, want := range map[string]string{"gmial.com": "gmail.com", "gmx.dee": "gmx.de", "web.de": "", "example.org": "", "outlok.com": "outlook.com"} {
+		if got := typoSuggestion(in); got != want {
+			t.Errorf("typoSuggestion(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestMacTable(t *testing.T) {
+	path := t.TempDir() + "/manuf"
+	data := "# comment\n00:00:0C\tCisco\tCisco Systems, Inc\n00:1B:C5:00:00:00/36\tConverging\tConverging Systems Inc.\nFC:FB:FB\tCisco\tCisco Systems, Inc\n"
+	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	table, err := loadManuf(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for in, want := range map[string]string{"00-00-0c-12-34-56": "Cisco Systems, Inc", "001B.C500.0123": "Converging Systems Inc.", "fcfbfb": "Cisco Systems, Inc", "00:1B:C5:F0:00:00": ""} {
+		v, ok := macValue(in)
+		if !ok {
+			t.Fatalf("macValue(%q) failed", in)
+		}
+		if got, _ := table.lookup(v); got != want {
+			t.Errorf("lookup(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for _, bad := range []string{"xyz", "00:11", "00:11:22:33:44:55:66"} {
+		if _, ok := macValue(bad); ok {
+			t.Errorf("macValue(%q) accepted", bad)
+		}
+	}
+}
+
+func TestEmailCheckRejectsInvalid(t *testing.T) {
+	for _, in := range []string{"", "foo", "a@b", "a@localhost", "a b@example.com"} {
+		if _, err := emailCheck(context.Background(), url.Values{"q": {in}}); err == nil {
+			t.Errorf("emailCheck(%q) accepted", in)
+		}
 	}
 }

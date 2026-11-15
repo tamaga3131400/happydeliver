@@ -3,14 +3,44 @@
     import { checkers } from "$lib/tools/checkers";
     import { devTools, type Text } from "$lib/tools/devtools";
 
-    type Entry = { slug: string; icon: string; title: Text; description: Text; local?: boolean };
+    type Entry = { slug: string; icon: string; title: Text; description: Text; local?: boolean; href?: string };
+
+    const securityEntries: Entry[] = [
+        {
+            slug: "security-overview",
+            icon: "shield-exclamation",
+            title: ["Security situation", "Sicherheitslage"],
+            description: [
+                "Top 10 urgent vulnerabilities per area – mail servers, WordPress, web apps and more. Updated daily.",
+                "Top 10 der dringendsten Schwachstellen je Bereich – Mailserver, WordPress, Webanwendungen und mehr. Täglich aktualisiert.",
+            ],
+        },
+        {
+            slug: "blacklist",
+            href: "/blacklist/",
+            icon: "slash-circle",
+            title: ["Blacklist check", "Sperrlisten-Prüfung"],
+            description: [
+                "Is an IP address listed on spam blacklists (DNSBL)?",
+                "Steht eine IP-Adresse auf Spam-Sperrlisten (DNSBL)?",
+            ],
+        },
+    ];
 
     let query = $state("");
     let index = $derived($language === "de" ? 1 : 0);
     const matches = (entry: Entry) =>
         `${entry.title.join(" ")} ${entry.description.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase());
 
-    let groups = $derived([
+    let groups = $derived<{ title: string; text: string; entries: Entry[] }[]>([
+        {
+            title: $t("Security", "Sicherheit"),
+            text: $t(
+                "Current threats and the reputation of your mail server.",
+                "Aktuelle Bedrohungen und der Ruf deines Mailservers.",
+            ),
+            entries: securityEntries.filter(matches),
+        },
         {
             title: $t("Check tools", "Prüf-Tools"),
             text: $t(
@@ -66,7 +96,7 @@
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
                     {#each group.entries as tool (tool.slug)}
                         <div class="col">
-                            <a class="card h-100 text-decoration-none tool-card" href="/tools/{tool.slug}">
+                            <a class="card h-100 text-decoration-none tool-card" href={tool.href ?? `/tools/${tool.slug}`}>
                                 <div class="card-body d-flex gap-3">
                                     <i class="bi bi-{tool.icon} fs-3 tool-icon"></i>
                                     <div>

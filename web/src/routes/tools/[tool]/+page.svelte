@@ -2,12 +2,14 @@
     import { page } from "$app/state";
     import { ErrorDisplay } from "$lib/components";
     import CheckerView from "$lib/components/CheckerView.svelte";
+    import SecurityOverview from "$lib/components/SecurityOverview.svelte";
     import { findChecker } from "$lib/tools/checkers";
     import { language, t } from "$lib/stores/language";
     import { findDevTool, type Options, type ToolResult } from "$lib/tools/devtools";
 
     let tool = $derived(findDevTool(page.params.tool));
     let checker = $derived(findChecker(page.params.tool));
+    let security = $derived(page.params.tool === "security-overview");
     let index = $derived($language === "de" ? 1 : 0);
 
     let input = $state("");
@@ -86,10 +88,29 @@
 </script>
 
 <svelte:head>
-    <title>{(tool ?? checker)?.title[index] ?? $t("Tool not found", "Tool nicht gefunden")} · Deliver Zenmail</title>
+    <title>{security ? $t("Security situation", "Sicherheitslage") : ((tool ?? checker)?.title[index] ?? $t("Tool not found", "Tool nicht gefunden"))} · Deliver Zenmail</title>
 </svelte:head>
 
-{#if checker}
+{#if security}
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small mb-0">
+                <li class="breadcrumb-item"><a href="/tools/">Tools</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{$t("Security situation", "Sicherheitslage")}</li>
+            </ol>
+        </nav>
+        <div class="col-lg-9 mx-auto px-0">
+            <h1 class="h2 fw-bold mb-1"><i class="bi bi-shield-exclamation me-2 tool-icon"></i>{$t("Security situation", "Sicherheitslage")}</h1>
+            <p class="text-muted mb-4">
+                {$t(
+                    "The ten most urgent vulnerabilities per area, updated daily.",
+                    "Die zehn dringendsten Schwachstellen je Bereich, täglich aktualisiert.",
+                )}
+            </p>
+            <SecurityOverview />
+        </div>
+    </div>
+{:else if checker}
     <div class="container py-4">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb small mb-0">

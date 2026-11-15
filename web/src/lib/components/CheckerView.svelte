@@ -7,7 +7,7 @@
 
     let index = $derived($language === "de" ? 1 : 0);
     let query = $state("");
-    let port = $state("443");
+    let choice = $state("");
     let file = $state<File | null>(null);
     let reveal = $state(false);
     let busy = $state(false);
@@ -19,7 +19,7 @@
     $effect(() => {
         void checker.slug;
         query = "";
-        port = checker.ports?.[0] ?? "";
+        choice = checker.choice?.values[0] ?? "";
         file = null;
         result = null;
         error = null;
@@ -32,7 +32,7 @@
         try {
             const next = checker.local
                 ? await checker.local(value, $language)
-                : await runRemote(checker.slug, String(value), checker.ports ? port : undefined);
+                : await runRemote(checker.slug, String(value), checker.choice ? { [checker.choice.param]: choice } : undefined);
             if (id === run) result = next;
         } catch (e) {
             if (id === run) {
@@ -122,9 +122,9 @@
                 placeholder={checker.placeholder}
                 bind:value={query}
             />
-            {#if checker.ports}
-                <select class="form-select flex-grow-0 w-auto" bind:value={port} aria-label="Port">
-                    {#each checker.ports as p (p)}<option value={p}>:{p}</option>{/each}
+            {#if checker.choice}
+                <select class="form-select flex-grow-0 w-auto" bind:value={choice} aria-label={checker.choice.label}>
+                    {#each checker.choice.values as v (v)}<option value={v}>{checker.choice.prefix ?? ""}{v}</option>{/each}
                 </select>
             {/if}
             <button class="btn btn-primary px-4" type="submit" disabled={busy || !query.trim()}>

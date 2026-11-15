@@ -53,13 +53,21 @@ var errBlocked = errors.New("target address is not public or port is not allowed
 type check func(ctx context.Context, q url.Values) (*Result, error)
 
 var checks = map[string]check{
-	"dns-lookup":     dnsLookup,
-	"ssl-lookup":     sslLookup,
-	"ip-lookup":      ipLookup,
-	"whois-lookup":   whoisLookup,
-	"http-headers":   httpHeaders,
-	"redirect-check": redirectCheck,
-	"meta-tags":      metaTags,
+	"dns-lookup":      dnsLookup,
+	"ssl-lookup":      sslLookup,
+	"ip-lookup":       ipLookup,
+	"whois-lookup":    whoisLookup,
+	"http-headers":    httpHeaders,
+	"redirect-check":  redirectCheck,
+	"meta-tags":       metaTags,
+	"dns-propagation": propagation,
+	"dnssec":          dnssecCheck,
+	"mail-ports":      mailPortCheck,
+	"email-check":     emailCheck,
+	"subdomains":      subdomainSearch,
+	"uptime":          uptimeCheck,
+	"ip-location":     geoLookup,
+	"mac-lookup":      macLookup,
 }
 
 var running = make(chan struct{}, 8)

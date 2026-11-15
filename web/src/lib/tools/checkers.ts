@@ -29,7 +29,8 @@ export interface Checker {
     input: "text" | "password" | "file";
     placeholder?: string;
     example?: string;
-    ports?: string[];
+    /** Optional selection sent as an extra query parameter (port, record type). */
+    choice?: { param: string; label: string; values: string[]; prefix?: string };
     local?: (value: string | File, language: "de" | "en") => Promise<CheckResult>;
 }
 
@@ -169,7 +170,7 @@ export const checkers: Checker[] = [
         input: "text",
         placeholder: "example.com",
         example: "deliver.zenmail.eu",
-        ports: ["443", "465", "993", "995", "8443"],
+        choice: { param: "port", label: "Port", values: ["443", "465", "993", "995", "8443"], prefix: ":" },
     },
     {
         slug: "ip-lookup",
@@ -232,6 +233,103 @@ export const checkers: Checker[] = [
         example: "https://deliver.zenmail.eu",
     },
     {
+        slug: "dns-propagation",
+        icon: "globe2",
+        title: T("DNS propagation", "DNS-Propagation"),
+        description: T(
+            "Compare the answers of six public DNS resolvers and the domain's own name servers – useful after DNS changes.",
+            "Antworten von sechs öffentlichen DNS-Resolvern und den eigenen Nameservern vergleichen – praktisch nach DNS-Änderungen.",
+        ),
+        input: "text",
+        placeholder: "example.com",
+        example: "zenmail.eu",
+        choice: { param: "type", label: "Typ", values: ["A", "AAAA", "MX", "TXT", "NS", "CNAME"] },
+    },
+    {
+        slug: "dnssec",
+        icon: "patch-check",
+        title: T("DNSSEC test", "DNSSEC-Test"),
+        description: T(
+            "Is the domain signed, are the keys in place and do validating resolvers accept the signatures?",
+            "Ist die Domain signiert, sind die Schlüssel vorhanden und akzeptieren validierende Resolver die Signaturen?",
+        ),
+        input: "text",
+        placeholder: "example.com",
+        example: "denic.de",
+    },
+    {
+        slug: "mail-ports",
+        icon: "envelope-check",
+        title: T("Mail server ports", "Mailserver-Ports"),
+        description: T(
+            "SMTP, submission, IMAP and POP3 of the MX servers: reachability, STARTTLS, TLS version and certificate.",
+            "SMTP, Submission, IMAP und POP3 der MX-Server: Erreichbarkeit, STARTTLS, TLS-Version und Zertifikat.",
+        ),
+        input: "text",
+        placeholder: "example.com",
+        example: "zenmail.eu",
+    },
+    {
+        slug: "email-check",
+        icon: "at",
+        title: T("Email address check", "E-Mail-Adresse prüfen"),
+        description: T(
+            "Syntax, typos, disposable and free mail providers, MX, SPF and DMARC of an address.",
+            "Syntax, Tippfehler, Wegwerf- und Freemail-Anbieter, MX, SPF und DMARC einer Adresse.",
+        ),
+        input: "text",
+        placeholder: "name@example.com",
+        example: "info@gmial.com",
+    },
+    {
+        slug: "subdomains",
+        icon: "diagram-2",
+        title: T("Subdomain finder", "Subdomains finden"),
+        description: T(
+            "Names found in public TLS certificates (Certificate Transparency).",
+            "Namen aus öffentlichen TLS-Zertifikaten (Certificate Transparency).",
+        ),
+        input: "text",
+        placeholder: "example.com",
+        example: "zenmail.eu",
+    },
+    {
+        slug: "uptime",
+        icon: "activity",
+        title: T("Is my site down?", "Ist meine Seite erreichbar?"),
+        description: T(
+            "Status, redirect and timings for connection, TLS and first byte.",
+            "Status, Weiterleitung und Zeiten für Verbindung, TLS und erstes Byte.",
+        ),
+        input: "text",
+        placeholder: "https://example.com",
+        example: "https://deliver.zenmail.eu",
+    },
+    {
+        slug: "ip-location",
+        icon: "geo-alt",
+        title: T("IP location", "IP-Standort"),
+        description: T(
+            "Country, region and city of an IP address or domain (DB-IP Lite).",
+            "Land, Region und Stadt einer IP-Adresse oder Domain (DB-IP Lite).",
+        ),
+        input: "text",
+        placeholder: "192.0.2.1 / example.com",
+        example: "8.8.8.8",
+    },
+    {
+        slug: "mac-lookup",
+        icon: "ethernet",
+        title: T("MAC address vendor", "MAC-Adresse: Hersteller"),
+        description: T(
+            "Find the manufacturer of a network device by its MAC address.",
+            "Den Hersteller eines Netzwerkgeräts anhand seiner MAC-Adresse ermitteln.",
+        ),
+        input: "text",
+        placeholder: "00:1A:2B:3C:4D:5E",
+        example: "3C:22:FB:12:34:56",
+    },
+    {
         slug: "password-strength",
         icon: "key",
         title: T("Password strength", "Passwortstärke"),
@@ -259,9 +357,8 @@ export function findChecker(slug: string | undefined): Checker | undefined {
     return checkers.find((checker) => checker.slug === slug);
 }
 
-export async function runRemote(slug: string, query: string, port?: string): Promise<CheckResult> {
-    const params = new URLSearchParams({ q: query });
-    if (port) params.set("port", port);
+export async function runRemote(slug: string, query: string, extra?: Record<string, string>): Promise<CheckResult> {
+    const params = new URLSearchParams({ q: query, ...extra });
     const response = await fetch(`/api/tools/${slug}?${params}`, { headers: { Accept: "application/json" } });
     const body = await response.json().catch(() => null);
     if (!response.ok) {

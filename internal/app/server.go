@@ -24,6 +24,7 @@ package app
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"git.happydns.org/happyDeliver/internal/api"
 	"git.happydns.org/happyDeliver/internal/checker"
 	"git.happydns.org/happyDeliver/internal/config"
+	"git.happydns.org/happyDeliver/internal/feeds"
 	"git.happydns.org/happyDeliver/internal/lmtp"
 	"git.happydns.org/happyDeliver/internal/storage"
 	"git.happydns.org/happyDeliver/pkg/analyzer"
@@ -93,6 +95,23 @@ func RunServer(cfg *config.Config) error {
 
 	apiGroup := router.Group("/api")
 	apiGroup.Use(publicRateLimit(func() uint { return cfg.Effective().RateLimit }))
+
+	// Data feeds for the tools (vulnerability lists, IP and MAC databases).
+	feedStore := feeds.NewStore(cfg.FeedsDir)
+	security := feeds.NewSecurity(feedStore)
+	checker.UseFeeds(feedStore)
+	feedStore.Run(ctx, feeds.Sources)
+	security.Run(ctx)
+	apiGroup.GET("/tools/security-overview", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=600")
+		if overview := security.Current(); overview != nil {
+			c.JSON(http.StatusOK, overview)
+			return
+		}
+		c.JSON(http.StatusServiceUnavailable, gin.H{"message": [2]string{
+			"The overview is being prepared. Please try again in a few minutes.",
+			"Die Übersicht wird gerade erstellt. Bitte versuche es in ein paar Minuten erneut."}})
+	})
 
 	// Network checks for /tools/ get a stricter per-IP limit.
 	checker.Register(apiGroup.Group("/tools", toolsRateLimit()))
