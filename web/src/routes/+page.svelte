@@ -295,6 +295,10 @@
                 <i class="bi bi-shield-exclamation me-2"></i>
                 {$t("Check IP Blacklist", "IP auf Sperrlisten prüfen")}
             </a>
+            <a href="/tools/" class="btn btn-secondary btn-lg">
+                <i class="bi bi-tools me-2"></i>
+                {$t("More tools", "Weitere Tools")}
+            </a>
         </div>
     </div>
 </section>
