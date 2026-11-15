@@ -94,8 +94,7 @@
                             <div class="flex-grow-1 min-w-0">
                                 <h2 class="h6 fw-bold mb-1 text-break">{item.title}</h2>
                                 <div class="small text-muted mb-2">
-                                    {#if item.platform}{item.platform} · {/if}{item.date}{#if item.cves?.length}
-                                        · <span class="font-monospace">{item.cves.join(", ")}</span>{/if}
+                                    {[item.platform, item.date].filter(Boolean).join(" · ")}{#if item.cves?.length}{" · "}<span class="font-monospace">{item.cves.join(", ")}</span>{/if}
                                 </div>
                                 <div class="d-flex flex-wrap gap-1 mb-2">
                                     {#if item.exploited}
