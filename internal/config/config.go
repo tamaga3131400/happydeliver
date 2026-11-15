@@ -36,15 +36,24 @@ import (
 
 // Config represents the application configuration
 type Config struct {
+	Admin           AdminConfig
+	TrustedProxies  string
+	Settings        *SettingsStore
+	AdminEnabled    bool
 	DevProxy        string
 	Bind            string
 	Database        DatabaseConfig
 	Email           EmailConfig
 	Analysis        AnalysisConfig
-	ReportRetention time.Duration // How long to keep reports. 0 = keep forever
+	ReportRetention time.Duration // How long to keep reports (at most MaxReportRetention)
 	RateLimit       uint          // API rate limit (requests per second per IP)
 	SurveyURL       url.URL       // URL for user feedback survey
 	CustomLogoURL   string        // URL for custom logo image in the web UI
+}
+
+// AdminConfig defines the server-side administration access.
+type AdminConfig struct {
+	User, PasswordFile, SettingsFile, Origin string
 }
 
 // DatabaseConfig contains database connection settings
@@ -62,10 +71,10 @@ type EmailConfig struct {
 
 // AnalysisConfig contains timeout and behavior settings for email analysis
 type AnalysisConfig struct {
-	DNSTimeout   time.Duration
-	HTTPTimeout  time.Duration
-	RBLs         []string
-	CheckAllIPs  bool // Check all IPs found in headers, not just the first one
+	DNSTimeout  time.Duration
+	HTTPTimeout time.Duration
+	RBLs        []string
+	CheckAllIPs bool // Check all IPs found in headers, not just the first one
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -73,7 +82,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		DevProxy:        "",
 		Bind:            ":8080",
-		ReportRetention: 0, // Keep reports forever by default
+		ReportRetention: MaxReportRetention,
 		RateLimit:       1, // is in fact 2 requests per 2 seconds per IP (default)
 		Database: DatabaseConfig{
 			Type: "sqlite",
@@ -153,6 +162,10 @@ func (c *Config) Validate() error {
 
 	if _, err := openapi_types.Email(fmt.Sprintf("%s1234-5678-9090@%s", c.Email.TestAddressPrefix, c.Email.Domain)).MarshalJSON(); err != nil {
 		return fmt.Errorf("invalid email domain: %w", err)
+	}
+
+	if c.ReportRetention <= 0 || c.ReportRetention > MaxReportRetention {
+		return fmt.Errorf("report retention must be greater than 0 and at most %s (10 days)", MaxReportRetention)
 	}
 
 	if c.Database.Type != "sqlite" && c.Database.Type != "postgres" {

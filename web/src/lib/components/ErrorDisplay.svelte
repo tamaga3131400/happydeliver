@@ -135,7 +135,7 @@
                         {$t("Features", "Funktionen")}
                     </a>
                     <a
-                        href="https://github.com/happyDomain/happydeliver"
+                        href="https://github.com/tamaga3131400/happydeliver"
                         class="badge bg-light text-dark text-decoration-none"
                     >
                         {$t("Documentation", "Dokumentation")}

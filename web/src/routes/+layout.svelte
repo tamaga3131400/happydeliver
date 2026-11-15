@@ -3,8 +3,6 @@
     import "bootstrap/dist/css/bootstrap.min.css";
     import "../app.css";
 
-    import favicon from "$lib/assets/favicon.svg";
-
     import Logo from "$lib/components/Logo.svelte";
     import { appConfig } from "$lib/stores/config";
     import { language, t } from "$lib/stores/language";
@@ -27,19 +25,22 @@
 </script>
 
 <svelte:head>
-    <link rel="icon" href={favicon} />
+    <link rel="icon" href="/img/zenmail-plane.svg" type="image/svg+xml" />
 </svelte:head>
 
 <div class="min-vh-100 d-flex flex-column">
     <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">
-                {#if $appConfig.custom_logo_url}
-                    <img src={$appConfig.custom_logo_url} alt="Logo" style="height: 25px;" />
-                {:else}
-                    <i class="bi bi-envelope-check me-2"></i>
-                    Deliver Zenmail
-                {/if}
+            <a class="navbar-brand fw-bold d-inline-flex align-items-center gap-2" href="/">
+                <img
+                    class="brand-mark"
+                    src={$appConfig.custom_logo_url || "/img/zenmail-plane.svg"}
+                    alt=""
+                    referrerpolicy="no-referrer"
+                    width="30"
+                    height="30"
+                />
+                Deliver Zenmail
             </a>
             <div class="d-flex align-items-center">
                 <label for="site-language" class="visually-hidden"
@@ -73,24 +74,31 @@
         id="footer-classic"
         class="px-4 px-md-5 py-2 bg-tertiary d-flex flex-wrap gap-2 justify-content-between"
     >
-        <a href="https://happydeliver.org/"
+        <a href="https://github.com/tamaga3131400/happydeliver"
             >{$t("Based on happyDeliver", "Basiert auf happyDeliver")}</a
         >
         <ul class="d-flex footer-nav">
             <li>
                 <a
-                    href="https://git.happydomain.org/happydeliver/-/blob/master/api/openapi.yaml?ref_type=heads"
+                    href="https://github.com/tamaga3131400/happydeliver/blob/deliver-zenmail/api/openapi.yaml"
                     target="_blank"
                 >
                     API
                 </a>
             </li>
             <li>
-                <a href="https://github.com/tamaga3131400/happydeliver/tree/deliver-zenmail">
+                <a href="https://github.com/tamaga3131400/happydeliver/tree/deliver-zenmail-admin">
                     {$t("Source code (AGPL v3)", "Quellcode (AGPL v3)")}
                 </a>
             </li>
-            <li><a href="https://feedback.happydeliver.org/" target="_blank">Feedback</a></li>
+            {#if $appConfig.admin_enabled}
+                <li>
+                    <a href="/admin" data-sveltekit-reload
+                        >{$t("Administration", "Administration")}</a
+                    >
+                </li>
+            {/if}
+            <li><a href="https://github.com/tamaga3131400/happydeliver/issues" target="_blank">Feedback</a></li>
         </ul>
     </footer>
 
@@ -105,12 +113,12 @@
                         <li><a href="/#features">Features</a></li>
                         <li>
                             <a
-                                href="https://github.com/happyDomain/happydeliver/releases"
+                                href="https://github.com/tamaga3131400/happydeliver/releases"
                                 target="_blank">Download</a
                             >
                         </li>
                         <li>
-                            <a href="https://github.com/happyDomain/happydeliver/" target="_blank">
+                            <a href="https://github.com/tamaga3131400/happydeliver" target="_blank">
                                 GitHub
                             </a>
                         </li>
@@ -120,17 +128,17 @@
                     <h3>Our association</h3>
                     <ul class="footer-links">
                         <li>
-                            <a href="https://www.happydomain.org/en/who-we-are/" target="_blank">
+                            <a href="https://github.com/tamaga3131400/happydeliver" target="_blank">
                                 About us
                             </a>
                         </li>
                         <li>
-                            <a href="https://www.happydomain.org/en/community/" target="_blank">
+                            <a href="https://github.com/tamaga3131400/happydeliver/issues" target="_blank">
                                 Contact
                             </a>
                         </li>
                         <li>
-                            <a href="https://www.happydomain.org/en/legal-notice/" target="_blank">
+                            <a href="https://github.com/tamaga3131400/happydeliver" target="_blank">
                                 Legal notice
                             </a>
                         </li>
@@ -144,32 +152,18 @@
                         style="gap: .5em; font-size: 2em"
                     >
                         <a
-                            href="https://framagit.org/happyDomain/happydeliver"
-                            target="_blank"
-                            aria-label="Visit our GitLab repository"
-                        >
-                            <i class="bi bi-gitlab"></i>
-                        </a>
-                        <a
-                            href="https://github.com/happyDomain/happydeliver"
+                            href="https://github.com/tamaga3131400/happydeliver"
                             target="_blank"
                             aria-label="Visit our GitHub repository"
                         >
                             <i class="bi bi-github"></i>
                         </a>
                         <a
-                            href="https://feedback.happydeliver.org/"
+                            href="https://github.com/tamaga3131400/happydeliver/issues"
                             target="_blank"
                             aria-label="Share your feedback"
                         >
                             <i class="bi bi-lightbulb-fill"></i>
-                        </a>
-                        <a
-                            href="https://floss.social/@happyDomain"
-                            target="_blank"
-                            aria-label="Follow us on Mastodon"
-                        >
-                            <i class="bi bi-mastodon"></i>
                         </a>
                     </div>
                 </div>
@@ -179,6 +173,10 @@
 </div>
 
 <style>
+    .brand-mark {
+        object-fit: contain;
+    }
+
     footer {
         border-top: 3px solid #0f625e;
     }
@@ -192,6 +190,7 @@
         padding: 0;
         margin: 0;
         gap: 0;
+        flex-wrap: wrap;
     }
 
     .footer-nav li {

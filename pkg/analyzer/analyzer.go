@@ -47,6 +47,10 @@ func NewEmailAnalyzer(cfg *config.Config) *EmailAnalyzer {
 		cfg.Analysis.CheckAllIPs,
 	)
 
+	if cfg.Settings != nil && len(cfg.Analysis.RBLs) == 0 {
+		generator.rblChecker.RBLs = nil
+	}
+
 	return &EmailAnalyzer{
 		generator: generator,
 	}
@@ -83,19 +87,19 @@ func (a *EmailAnalyzer) AnalyzeEmailBytes(rawEmail []byte, testID uuid.UUID) (*A
 // APIAdapter adapts the EmailAnalyzer to work with the API package
 // This adapter implements the interface expected by the API handler
 type APIAdapter struct {
-	analyzer *EmailAnalyzer
+	config *config.Config
 }
 
 // NewAPIAdapter creates a new API adapter for the email analyzer
 func NewAPIAdapter(cfg *config.Config) *APIAdapter {
 	return &APIAdapter{
-		analyzer: NewEmailAnalyzer(cfg),
+		config: cfg,
 	}
 }
 
 // AnalyzeEmailBytes performs analysis and returns JSON bytes directly
 func (a *APIAdapter) AnalyzeEmailBytes(rawEmail []byte, testID uuid.UUID) ([]byte, error) {
-	result, err := a.analyzer.AnalyzeEmailBytes(rawEmail, testID)
+	result, err := NewEmailAnalyzer(a.config.Effective()).AnalyzeEmailBytes(rawEmail, testID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,19 +115,24 @@ func (a *APIAdapter) AnalyzeEmailBytes(rawEmail []byte, testID uuid.UUID) ([]byt
 
 // AnalyzeDomain performs DNS analysis for a domain and returns the results
 func (a *APIAdapter) AnalyzeDomain(domain string) (*api.DNSResults, int, string) {
+	dns := NewEmailAnalyzer(a.config.Effective()).generator.dnsAnalyzer
 	// Perform DNS analysis
-	dnsResults := a.analyzer.generator.dnsAnalyzer.AnalyzeDomainOnly(domain)
+	dnsResults := dns.AnalyzeDomainOnly(domain)
 
 	// Calculate score
-	score, grade := a.analyzer.generator.dnsAnalyzer.CalculateDomainOnlyScore(dnsResults)
+	score, grade := dns.CalculateDomainOnlyScore(dnsResults)
 
 	return dnsResults, score, grade
 }
 
 // CheckBlacklistIP checks a single IP address against DNS blacklists
 func (a *APIAdapter) CheckBlacklistIP(ip string) ([]api.BlacklistCheck, int, int, string, error) {
+	rbl := NewEmailAnalyzer(a.config.Effective()).generator.rblChecker
+	if len(rbl.RBLs) == 0 {
+		return nil, 0, 0, "", fmt.Errorf("no DNS blacklists configured")
+	}
 	// Check the IP against all configured RBLs
-	checks, listedCount, err := a.analyzer.generator.rblChecker.CheckIP(ip)
+	checks, listedCount, err := rbl.CheckIP(ip)
 	if err != nil {
 		return nil, 0, 0, "", err
 	}
@@ -135,7 +144,7 @@ func (a *APIAdapter) CheckBlacklistIP(ip string) ([]api.BlacklistCheck, int, int
 		IPsChecked:  []string{ip},
 		ListedCount: listedCount,
 	}
-	score, grade := a.analyzer.generator.rblChecker.CalculateRBLScore(results)
+	score, grade := rbl.CalculateRBLScore(results)
 
 	return checks, listedCount, score, grade, nil
 }

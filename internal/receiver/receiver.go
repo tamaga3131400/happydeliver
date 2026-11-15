@@ -39,17 +39,15 @@ import (
 
 // EmailReceiver handles incoming emails from the MTA
 type EmailReceiver struct {
-	storage  storage.Storage
-	config   *config.Config
-	analyzer *analyzer.EmailAnalyzer
+	storage storage.Storage
+	config  *config.Config
 }
 
 // NewEmailReceiver creates a new email receiver
 func NewEmailReceiver(store storage.Storage, cfg *config.Config) *EmailReceiver {
 	return &EmailReceiver{
-		storage:  store,
-		config:   cfg,
-		analyzer: analyzer.NewEmailAnalyzer(cfg),
+		storage: store,
+		config:  cfg,
 	}
 }
 
@@ -91,7 +89,7 @@ func (r *EmailReceiver) ProcessEmailBytes(rawEmail []byte, recipientEmail string
 	log.Printf("Analyzing email for test %s", testID)
 
 	// Analyze the email using the shared analyzer
-	result, err := r.analyzer.AnalyzeEmailBytes(rawEmail, testID)
+	result, err := analyzer.NewEmailAnalyzer(r.config.Effective()).AnalyzeEmailBytes(rawEmail, testID)
 	if err != nil {
 		return fmt.Errorf("failed to analyze email: %w", err)
 	}

@@ -20,3 +20,8 @@ RUN go generate ./... && \
 FROM happydomain/happydeliver:1.2.0@sha256:8fad07c7c3e28d8836ecc9707fc07d458ed72990ec92e0ddc10bfcdea8736645
 
 COPY --from=app-build /out/happyDeliver /usr/local/bin/happyDeliver
+COPY docker/zenmail/log-retention.sh /usr/local/bin/zenmail-log-retention
+COPY docker/zenmail/log-retention.conf /tmp/log-retention.conf
+RUN chmod 755 /usr/local/bin/zenmail-log-retention && \
+    cat /tmp/log-retention.conf >> /etc/supervisor/supervisord.conf && \
+    rm /tmp/log-retention.conf

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administration · Deliver Zenmail</title>
+<style>
+:root{color-scheme:light dark;--accent:#0f625e;--accent-text:#fff}
+body{font:1rem/1.55 system-ui,sans-serif;margin:0;background:Canvas;color:CanvasText}
+header{background:#123b40;color:white;padding:1.4rem 1rem}
+main, header div{max-width:46rem;margin:auto}
+main{padding:1.5rem 1rem 3rem}
+h1{font-size:1.8rem;margin:0}
+h2{font-size:1.25rem;margin:0 0 .6rem}
+section{border:1px solid #8887;border-radius:.75rem;padding:1rem 1.25rem;margin-bottom:1rem}
+label{display:block;margin-top:.9rem;font-weight:600}
+input:not([type=checkbox]),textarea{box-sizing:border-box;width:100%;font:inherit;padding:.55rem;border:1px solid #888;border-radius:.35rem;margin-top:.25rem}
+textarea{resize:vertical}
+label.check{font-weight:normal}
+small{display:block;margin-top:.25rem}
+button{background:var(--accent);color:var(--accent-text);font:inherit;font-weight:600;border:0;border-radius:.4rem;padding:.7rem 1rem;cursor:pointer}
+header a{color:white;text-underline-offset:.18em}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c68927;outline-offset:2px}
+.message{padding:.7rem 1rem;border-inline-start:4px solid #28876c}
+.error{border-color:#bd5734}
+</style>
+</head>
+<body>
+<header><div><a href="/">Deliver Zenmail</a><h1>Administration</h1></div></header>
+<main>
+{{if .Saved}}<p class="message" role="status">Einstellungen gespeichert.</p>{{end}}
+{{if .Error}}<p class="message error" role="alert">{{.Error}}</p>{{end}}
+<form method="post" action="/admin">
+<input type="hidden" name="csrf" value="{{.Token}}">
+<section>
+<h2>Weboberfläche und API</h2>
+<label for="logo">Logo-URL</label>
+<input id="logo" name="logo" type="text" inputmode="url" value="{{.LogoURL}}" placeholder="https://example.com/logo.png">
+<small>Ohne eigene URL wird das Zenmail-Flugzeug verwendet. Möglich sind HTTPS-URLs und lokale Pfade unter <code>/img/</code>.</small>
+<label for="rate">API-Anfragen pro Sekunde und IP</label>
+<input id="rate" name="rate" type="number" min="0" max="1000" required value="{{.RateLimit}}">
+<small>0 deaktiviert das Limit. Ein Zeitfenster von zwei Sekunden erlaubt kurze Anfragespitzen.</small>
+</section>
+<section>
+<h2>Mailanalyse</h2>
+<label for="rbls">DNS-Sperrlisten</label>
+<textarea id="rbls" name="rbls" rows="5" spellcheck="false">{{.Zones}}</textarea>
+<small>Eine DNS-Zone pro Zeile. Leer lassen, um keine Sperrlisten abzufragen.</small>
+<label class="check"><input type="checkbox" name="all_ips" {{if .CheckAllIPs}}checked{{end}}> Alle IP-Adressen aus den Kopfzeilen prüfen</label>
+<label for="dns">DNS-Timeout</label>
+<input id="dns" name="dns_timeout" required value="{{.DNSTimeout}}" placeholder="5s">
+<small>1s bis 30s.</small>
+<label for="http">HTTP-Timeout für Prüfungen</label>
+<input id="http" name="http_timeout" required value="{{.HTTPTimeout}}" placeholder="10s">
+<small>1s bis 60s.</small>
+</section>
+<section>
+<h2>Berichte</h2>
+<label for="retention">Aufbewahrungsdauer</label>
+<input id="retention" name="retention" required value="{{.ReportRetention}}" placeholder="240h">
+<small>Höchstens 240h (10 Tage). Danach werden Berichte und gespeicherte Mails gelöscht. Die Bereinigung läuft stündlich und beim Start.</small>
+<label class="check"><input type="checkbox" name="confirm_retention"> Bei einer kürzeren Dauer dürfen ältere Berichte gelöscht werden.</label>
+</section>
+<button type="submit">Einstellungen speichern</button>
+</form>
+</main>
+</body>
+</html>

@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"log"
@@ -33,6 +34,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/gin-gonic/gin"
@@ -42,6 +44,7 @@ import (
 
 var (
 	indexTpl       *template.Template
+	indexOnce      sync.Once
 	CustomBodyHTML = ""
 	CustomHeadHTML = ""
 )
@@ -51,31 +54,28 @@ func init() {
 	flag.StringVar(&CustomBodyHTML, "custom-body-html", CustomBodyHTML, "Add custom HTML right before </body>")
 }
 
-func DeclareRoutes(cfg *config.Config, router *gin.Engine) {
-	appConfig := map[string]interface{}{}
-
-	if cfg.ReportRetention > 0 {
-		appConfig["report_retention"] = cfg.ReportRetention
+func publicHead(cfg *config.Config) string {
+	effective := cfg.Effective()
+	appConfig := map[string]interface{}{
+		"report_retention": effective.ReportRetention,
+		"rbls":             append([]string{}, effective.Analysis.RBLs...),
+		"admin_enabled":    cfg.AdminEnabled,
 	}
-
 	if cfg.SurveyURL.Host != "" {
 		appConfig["survey_url"] = cfg.SurveyURL.String()
 	}
-
-	if len(cfg.Analysis.RBLs) > 0 {
-		appConfig["rbls"] = cfg.Analysis.RBLs
+	if effective.CustomLogoURL != "" {
+		appConfig["custom_logo_url"] = effective.CustomLogoURL
 	}
-
-	if cfg.CustomLogoURL != "" {
-		appConfig["custom_logo_url"] = cfg.CustomLogoURL
-	}
-
-	if appcfg, err := json.MarshalIndent(appConfig, "", "  "); err != nil {
+	appcfg, err := json.Marshal(appConfig)
+	if err != nil {
 		log.Println("Unable to generate JSON config to inject in web application")
-	} else {
-		CustomHeadHTML += `<script id="app-config" type="application/json">` + string(appcfg) + `</script>`
+		return CustomHeadHTML
 	}
+	return CustomHeadHTML + `<script id="app-config" type="application/json">` + string(appcfg) + `</script>`
+}
 
+func DeclareRoutes(cfg *config.Config, router *gin.Engine) {
 	if cfg.DevProxy != "" {
 		router.GET("/.svelte-kit/*_", serveOrReverse("", cfg))
 		router.GET("/node_modules/*_", serveOrReverse("", cfg))
@@ -147,12 +147,12 @@ func serveOrReverse(forced_url string, cfg *config.Config) gin.HandlerFunc {
 
 						v2 := strings.Replace(strings.Replace(string(v), "</head>", `{{ .Head }}<meta property="og:url" content="{{ .RootURL }}"></head>`, 1), "</body>", "{{ .Body }}</body>", 1)
 
-						indexTpl = template.Must(template.New("index.html").Parse(v2))
+						devTpl := template.Must(template.New("index.html").Parse(v2))
 
-						if err := indexTpl.ExecuteTemplate(c.Writer, "index.html", map[string]string{
+						if err := devTpl.ExecuteTemplate(c.Writer, "index.html", map[string]string{
 							"Body":    CustomBodyHTML,
-							"Head":    CustomHeadHTML,
-							"RootURL": fmt.Sprintf("https://%s/", c.Request.Host),
+							"Head":    publicHead(cfg),
+							"RootURL": fmt.Sprintf("https://%s/", html.EscapeString(c.Request.Host)),
 						}); err != nil {
 							log.Println("Unable to return index.html:", err.Error())
 						}
@@ -167,21 +167,19 @@ func serveOrReverse(forced_url string, cfg *config.Config) gin.HandlerFunc {
 	} else if forced_url == "/" {
 		// Serve altered index.html
 		return func(c *gin.Context) {
-			if indexTpl == nil {
-				// Create template from file
-				f, _ := Assets.Open("index.html")
-				v, _ := io.ReadAll(f)
+			indexOnce.Do(func() {
+				v, _ := fs.ReadFile(_assets, "build/index.html")
 
 				v2 := strings.Replace(strings.Replace(string(v), "</head>", `{{ .Head }}<meta property="og:url" content="{{ .RootURL }}"></head>`, 1), "</body>", "{{ .Body }}</body>", 1)
 
 				indexTpl = template.Must(template.New("index.html").Parse(v2))
-			}
+			})
 
 			// Serve template
 			if err := indexTpl.ExecuteTemplate(c.Writer, "index.html", map[string]string{
 				"Body":    CustomBodyHTML,
-				"Head":    CustomHeadHTML,
-				"RootURL": fmt.Sprintf("https://%s/", c.Request.Host),
+				"Head":    publicHead(cfg),
+				"RootURL": fmt.Sprintf("https://%s/", html.EscapeString(c.Request.Host)),
 			}); err != nil {
 				log.Println("Unable to return index.html:", err.Error())
 			}

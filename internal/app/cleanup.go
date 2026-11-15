@@ -37,13 +37,13 @@ const (
 // CleanupService handles periodic cleanup of old reports
 type CleanupService struct {
 	store     storage.Storage
-	retention time.Duration
+	retention func() time.Duration
 	ticker    *time.Ticker
 	done      chan struct{}
 }
 
 // NewCleanupService creates a new cleanup service
-func NewCleanupService(store storage.Storage, retention time.Duration) *CleanupService {
+func NewCleanupService(store storage.Storage, retention func() time.Duration) *CleanupService {
 	return &CleanupService{
 		store:     store,
 		retention: retention,
@@ -53,14 +53,6 @@ func NewCleanupService(store storage.Storage, retention time.Duration) *CleanupS
 
 // Start begins the cleanup service in a background goroutine
 func (s *CleanupService) Start(ctx context.Context) {
-	if s.retention <= 0 {
-		log.Println("Report retention is disabled (keeping reports forever)")
-		return
-	}
-
-	log.Printf("Starting cleanup service: will delete reports older than %s", s.retention)
-
-	// Run cleanup immediately on startup
 	s.runCleanup()
 
 	// Then run periodically
@@ -72,7 +64,6 @@ func (s *CleanupService) Start(ctx context.Context) {
 			case <-s.ticker.C:
 				s.runCleanup()
 			case <-ctx.Done():
-				s.Stop()
 				return
 			case <-s.done:
 				return
@@ -91,7 +82,11 @@ func (s *CleanupService) Stop() {
 
 // runCleanup performs the actual cleanup operation
 func (s *CleanupService) runCleanup() {
-	cutoffTime := time.Now().Add(-s.retention)
+	retention := s.retention()
+	if retention <= 0 {
+		return
+	}
+	cutoffTime := time.Now().Add(-retention)
 	log.Printf("Running cleanup: deleting reports older than %s", cutoffTime.Format(time.RFC3339))
 
 	deleted, err := s.store.DeleteOldReports(cutoffTime)

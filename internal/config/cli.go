@@ -38,10 +38,16 @@ func declareFlags(o *Config) {
 	flag.DurationVar(&o.Analysis.HTTPTimeout, "http-timeout", o.Analysis.HTTPTimeout, "Timeout when performing HTTP query")
 	flag.Var(&StringArray{&o.Analysis.RBLs}, "rbl", "Append a RBL (use this option multiple time to append multiple RBLs)")
 	flag.BoolVar(&o.Analysis.CheckAllIPs, "check-all-ips", o.Analysis.CheckAllIPs, "Check all IPs found in email headers against RBLs (not just the first one)")
-	flag.DurationVar(&o.ReportRetention, "report-retention", o.ReportRetention, "How long to keep reports (e.g., 720h, 30d). 0 = keep forever")
+	flag.DurationVar(&o.ReportRetention, "report-retention", o.ReportRetention, "How long to keep reports and raw emails (e.g., 240h; at most 240h = 10 days)")
 	flag.UintVar(&o.RateLimit, "rate-limit", o.RateLimit, "API rate limit (requests per second per IP)")
 	flag.Var(&URL{&o.SurveyURL}, "survey-url", "URL for user feedback survey")
 	flag.StringVar(&o.CustomLogoURL, "custom-logo-url", o.CustomLogoURL, "URL for custom logo image in the web UI")
+
+	flag.StringVar(&o.Admin.User, "admin-user", o.Admin.User, "Admin login name (defaults to admin)")
+	flag.StringVar(&o.Admin.PasswordFile, "admin-password-file", o.Admin.PasswordFile, "Read-only file containing the admin password")
+	flag.StringVar(&o.Admin.SettingsFile, "admin-settings-file", o.Admin.SettingsFile, "Persistent JSON file for runtime settings")
+	flag.StringVar(&o.Admin.Origin, "admin-origin", o.Admin.Origin, "Exact origin of the administration UI")
+	flag.StringVar(&o.TrustedProxies, "trusted-proxies", o.TrustedProxies, "Comma-separated addresses of trusted HTTP reverse proxies")
 
 	// Others flags are declared in some other files likes sources, storages, ... when they need specials configurations
 }

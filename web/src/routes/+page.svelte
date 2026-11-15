@@ -32,7 +32,8 @@
         if (!$appConfig.report_retention) return $t("indefinitely", "unbefristet");
 
         const hours = Math.floor($appConfig.report_retention / 3_600_000_000_000);
-        const unit = hours >= 720 ? "month" : hours >= 168 ? "week" : hours >= 24 ? "day" : "hour";
+        const exact = (divisor: number) => hours >= divisor && hours % divisor === 0;
+        const unit = exact(720) ? "month" : exact(168) ? "week" : exact(24) ? "day" : "hour";
         const divisor = { month: 720, week: 168, day: 24, hour: 1 }[unit];
         return new Intl.NumberFormat($language, {
             style: "unit",
@@ -136,8 +137,8 @@
             icon: "bi-lock",
             title: $t("Privacy First", "Datenschutz"),
             description: $t(
-                `Reports are stored on this server for: ${getRetentionTimeText()}.`,
-                `Speicherdauer der Berichte auf diesem Server: ${getRetentionTimeText()}.`,
+                `Reports are stored on this server for: ${getRetentionTimeText()}. Server logs are deleted after 10 days at most.`,
+                `Speicherdauer der Berichte auf diesem Server: ${getRetentionTimeText()}. Server-Protokolle werden nach höchstens 10 Tagen gelöscht.`,
             ),
             variant: "success" as const,
         },

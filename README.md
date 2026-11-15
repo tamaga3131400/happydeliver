@@ -11,7 +11,7 @@ To build the Deliver Zenmail image with the happyDeliver 1.2.0 runtime:
 docker build -f docker/Dockerfile.deliver-zenmail -t deliver-zenmail .
 ```
 
-![banner](banner.webp)
+![Deliver Zenmail mit Flugzeug-Symbol](web/static/img/zenmail-social.webp)
 
 An open-source email deliverability testing platform that analyzes test emails and provides detailed deliverability reports with scoring.
 
@@ -294,3 +294,50 @@ This project is funded through [NGI Zero Core](https://nlnet.nl/core), a fund es
 ## License
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)
+
+## Deliver Zenmail Administration
+
+The admin page at `/admin` is disabled unless configured. Set the following on
+the Deliver Zenmail service in Docker Compose:
+
+| Variable | Value |
+| --- | --- |
+| `HAPPYDELIVER_ADMIN_USER` | Login name. The default is `admin`. |
+| `HAPPYDELIVER_ADMIN_PASSWORD_FILE` | Path inside the container to a read-only secret file with one randomly generated password of at least 24 characters. The application user must be able to read the file. |
+| `HAPPYDELIVER_ADMIN_SETTINGS_FILE` | Writable path on the persistent data volume, for example `/var/lib/happydeliver/admin-settings.json`. Use a directory writable by the application user. |
+| `HAPPYDELIVER_ADMIN_ORIGIN` | Exact HTTPS origin, for example `https://deliver.zenmail.eu`, without a trailing slash. |
+| `HAPPYDELIVER_TRUSTED_PROXIES` | Comma-separated IPs or CIDRs of the actual reverse proxies. Under Docker, verify the source IP seen by the container before setting this. Leave empty for direct connections. |
+
+Keep the backend HTTP port on loopback or a private network. The HTTPS reverse
+proxy must preserve `Host` and set `X-Forwarded-Proto` from the connection
+scheme, replacing any client-supplied value. Trusted proxy addresses are also
+used to determine the client IP for the API and login rate limits. For local
+development, a loopback HTTP admin origin is supported.
+
+The first start uses the Docker settings as defaults. Saved values override
+them on subsequent requests and restarts. The API limit applies to new requests.
+Mail-analysis settings apply to new analyses and reanalyses. Logo changes
+appear after reloading the page. Reports and their raw emails are kept for at most
+240h (10 days), which is also the default (`HAPPYDELIVER_REPORT_RETENTION`).
+A shorter report retention can delete existing
+reports and requires confirmation on the form. Cleanup runs hourly and once on
+startup. Back up the settings file along with the report database.
+
+The Deliver Zenmail image rotates the files in `/var/log/happydeliver` and the
+mail log `/var/log/messages` once a day and deletes rotated files after at most
+10 days. Docker's own container log (`docker logs`) only contains supervisor
+messages and can only be limited by size, for example in Docker Compose:
+
+```yaml
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+The report's DNS guidance shows the relevant domain and DKIM selector when they
+can be determined. For SPF, DKIM and DMARC it lists the DNS name, record type
+and a value template, and shows observed DNS values separately. SPF includes,
+DKIM keys and CNAME targets are supplied by the sending service and appear as
+placeholders.

@@ -25,9 +25,9 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
 
-	ratelimit "github.com/JGLTechnologies/gin-rate-limit"
 	"github.com/gin-gonic/gin"
 
 	"git.happydns.org/happyDeliver/internal/api"
@@ -44,6 +44,23 @@ func RunServer(cfg *config.Config) error {
 		return err
 	}
 
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	router := gin.Default()
+	var trustedProxies []string
+	for _, proxy := range strings.Split(cfg.TrustedProxies, ",") {
+		if proxy = strings.TrimSpace(proxy); proxy != "" {
+			trustedProxies = append(trustedProxies, proxy)
+		}
+	}
+	if err := router.SetTrustedProxies(trustedProxies); err != nil {
+		return err
+	}
+	if err := configureAdmin(cfg, router, trustedProxies); err != nil {
+		return err
+	}
+
 	// Initialize storage
 	store, err := storage.NewStorage(cfg.Database.Type, cfg.Database.DSN)
 	if err != nil {
@@ -55,7 +72,7 @@ func RunServer(cfg *config.Config) error {
 
 	// Start cleanup service for old reports
 	ctx := context.Background()
-	cleanupSvc := NewCleanupService(store, cfg.ReportRetention)
+	cleanupSvc := NewCleanupService(store, func() time.Duration { return cfg.Effective().ReportRetention })
 	cleanupSvc.Start(ctx)
 	defer cleanupSvc.Stop()
 
@@ -72,34 +89,8 @@ func RunServer(cfg *config.Config) error {
 	// Create API handler
 	handler := api.NewAPIHandler(store, cfg, analyzerAdapter)
 
-	// Set up Gin router
-	if os.Getenv("GIN_MODE") == "" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-	router := gin.Default()
-
 	apiGroup := router.Group("/api")
-
-	if cfg.RateLimit > 0 {
-		// Set up rate limiting (2x to handle burst)
-		rateLimitStore := ratelimit.InMemoryStore(&ratelimit.InMemoryOptions{
-			Rate:  2 * time.Second,
-			Limit: 2 * cfg.RateLimit,
-		})
-		rateLimiter := ratelimit.RateLimiter(rateLimitStore, &ratelimit.Options{
-			ErrorHandler: func(c *gin.Context, info ratelimit.Info) {
-				c.JSON(429, gin.H{
-					"error":   "rate_limit_exceeded",
-					"message": "Too many requests. Try again in " + time.Until(info.ResetTime).String(),
-				})
-			},
-			KeyFunc: func(c *gin.Context) string {
-				return c.ClientIP()
-			},
-		})
-
-		apiGroup.Use(rateLimiter)
-	}
+	apiGroup.Use(publicRateLimit(func() uint { return cfg.Effective().RateLimit }))
 
 	// Register API routes
 	api.RegisterHandlers(apiGroup, handler)

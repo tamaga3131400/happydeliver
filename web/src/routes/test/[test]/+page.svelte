@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AuthenticationGuidance from "$lib/components/AuthenticationGuidance.svelte";
     import { t } from "$lib/stores/language";
     import { page } from "$app/state";
     import { onDestroy } from "svelte";
@@ -323,6 +324,12 @@
                     </div>
                 </div>
             {/if}
+            <AuthenticationGuidance
+                authentication={report.authentication}
+                dns={report.dns_results}
+                headers={report.header_analysis}
+                rawHeaders={report.raw_headers}
+            />
 
             <!-- Blacklist Checks -->
             {#if report.blacklists && Object.keys(report.blacklists).length > 0}
