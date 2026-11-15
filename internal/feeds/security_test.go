@@ -81,6 +81,15 @@ func TestDeduplicateAndMailKEV(t *testing.T) {
 	}
 }
 
+func TestEmptyCategoriesAreLists(t *testing.T) {
+	o := assemble(nil, nil, nil, nil, map[string]kevEntry{}, nil)
+	for _, c := range o.Categories {
+		if c.Items == nil {
+			t.Errorf("%s: items must be an empty list, not nil", c.Key)
+		}
+	}
+}
+
 func TestWordPressFromNVD(t *testing.T) {
 	c := nvdCVE{ID: "CVE-2026-5", Published: "2026-11-01T10:00:00.000",
 		Descriptions: []struct {

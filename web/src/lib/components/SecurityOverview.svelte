@@ -38,7 +38,7 @@
             if (!response.ok) {
                 error = body?.message ?? ["Error", "Fehler"];
             } else {
-                categories = body.categories;
+                categories = (body.categories ?? []).map((c: Category) => ({ ...c, items: c.items ?? [] }));
                 updated = body.updated;
                 active = categories.find((c) => c.items.length)?.key ?? active;
             }

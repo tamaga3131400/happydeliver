@@ -107,11 +107,35 @@ func (s *Security) Run(ctx context.Context) {
 			case <-s.pending:
 			default:
 			}
+			// A restart reports the existing files again; skip if nothing changed.
+			if o := s.Current(); o != nil && time.Since(o.Updated) < 24*time.Hour && !s.feedsNewerThan(o.Updated) && o.complete() {
+				continue
+			}
 			if err := s.build(ctx); err != nil {
 				log.Printf("security overview: %v", err)
 			}
 		}
 	}()
+}
+
+// complete reports whether every category has entries (an empty WordPress
+// list usually means NVD was unreachable during the last build).
+func (o *Overview) complete() bool {
+	for _, c := range o.Categories {
+		if c.Key == "wordpress" && len(c.Items) == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Security) feedsNewerThan(t time.Time) bool {
+	for _, name := range []string{"exploitdb.csv", "kev.json"} {
+		if info, err := os.Stat(s.store.Path(name)); err == nil && info.ModTime().After(t) {
+			return true
+		}
+	}
+	return false
 }
 
 type kevEntry struct {
@@ -154,7 +178,12 @@ func (s *Security) build(ctx context.Context) error {
 
 	wordpress, err := fetchWordPress(ctx, time.Now())
 	if err != nil {
-		log.Printf("security overview: NVD: %v", err)
+		log.Printf("security overview: NVD: %v (retrying in 30s)", err)
+		time.Sleep(30 * time.Second)
+		wordpress, err = fetchWordPress(ctx, time.Now())
+		if err != nil {
+			log.Printf("security overview: NVD: %v", err)
+		}
 	}
 
 	// Collect CVEs for EPSS.
@@ -174,6 +203,18 @@ func (s *Security) build(ctx context.Context) error {
 
 	overview := assemble(exploits, wordpress, recentKEV, mailKEV, kev, epss)
 	overview.Updated = time.Now().UTC()
+	// If NVD was unavailable, keep the previous WordPress list instead of showing none.
+	if len(wordpress) == 0 {
+		if previous := s.Current(); previous != nil {
+			for _, old := range previous.Categories {
+				for i := range overview.Categories {
+					if old.Key == "wordpress" && overview.Categories[i].Key == "wordpress" && len(old.Items) > 0 {
+						overview.Categories[i].Items = old.Items
+					}
+				}
+			}
+		}
+	}
 
 	if b, err := json.Marshal(overview); err == nil {
 		tmp := s.store.Path("security-overview.json.tmp")
@@ -624,7 +665,7 @@ func assemble(exploits []exploit, wordpress []wpCVE, kevRecent, kevMail []kevEnt
 			}
 			unique = append(unique, it)
 		}
-		categories[i].Items = unique[:min(10, len(unique))]
+		categories[i].Items = append([]Item{}, unique[:min(10, len(unique))]...) // never null in JSON
 	}
 	return &Overview{Categories: categories}
 }
