@@ -57,7 +57,7 @@
             DSGVO; das berechtigte Interesse liegt im sicheren und stabilen Betrieb.
         </p>
         <p>
-            Die Logdateien werden täglich rotiert und spätestens nach 11 Tagen gelöscht. Sie werden
+            Die Logdateien werden täglich rotiert und spätestens nach 10 Tagen gelöscht. Sie werden
             nicht zu anderen Zwecken ausgewertet und nicht mit anderen Daten zusammengeführt. Zur
             Begrenzung der Anfragen wird die IP-Adresse außerdem kurzzeitig im Arbeitsspeicher
             gehalten.
