@@ -41,3 +41,15 @@ func publicRateLimit(limit func() uint) gin.HandlerFunc {
 		}
 	}
 }
+
+// toolsRateLimit allows 20 network checks per minute and client IP.
+func toolsRateLimit() gin.HandlerFunc {
+	window := &requestWindow{}
+	return func(c *gin.Context) {
+		if !window.allow(c.ClientIP(), time.Minute, 20) {
+			c.Header("Retry-After", "60")
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"message": [2]string{
+				"Too many checks. Please wait a minute.", "Zu viele Prüfungen. Bitte warte eine Minute."}})
+		}
+	}
+}

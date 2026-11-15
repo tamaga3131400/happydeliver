@@ -78,7 +78,7 @@
             >{$t("Based on happyDeliver", "Basiert auf happyDeliver")}</a
         >
         <ul class="d-flex footer-nav">
-            <li><a href="/tools/">{$t("Developer tools", "Entwickler-Tools")}</a></li>
+            <li><a href="/tools/">Tools</a></li>
             <li>
                 <a
                     href="https://github.com/tamaga3131400/happydeliver/blob/deliver-zenmail/api/openapi.yaml"

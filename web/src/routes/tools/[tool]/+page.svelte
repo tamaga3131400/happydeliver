@@ -1,10 +1,13 @@
 <script lang="ts">
     import { page } from "$app/state";
     import { ErrorDisplay } from "$lib/components";
+    import CheckerView from "$lib/components/CheckerView.svelte";
+    import { findChecker } from "$lib/tools/checkers";
     import { language, t } from "$lib/stores/language";
     import { findDevTool, type Options, type ToolResult } from "$lib/tools/devtools";
 
     let tool = $derived(findDevTool(page.params.tool));
+    let checker = $derived(findChecker(page.params.tool));
     let index = $derived($language === "de" ? 1 : 0);
 
     let input = $state("");
@@ -83,16 +86,30 @@
 </script>
 
 <svelte:head>
-    <title>{tool ? tool.title[index] : $t("Tool not found", "Tool nicht gefunden")} · Deliver Zenmail</title>
+    <title>{(tool ?? checker)?.title[index] ?? $t("Tool not found", "Tool nicht gefunden")} · Deliver Zenmail</title>
 </svelte:head>
 
-{#if !tool}
+{#if checker}
+    <div class="container py-4">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small mb-0">
+                <li class="breadcrumb-item"><a href="/tools/">{$t("Tools", "Tools")}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{checker.title[index]}</li>
+            </ol>
+        </nav>
+        <div class="col-lg-9 mx-auto px-0">
+            <h1 class="h2 fw-bold mb-1"><i class="bi bi-{checker.icon} me-2 tool-icon"></i>{checker.title[index]}</h1>
+            <p class="text-muted mb-4">{checker.description[index]}</p>
+            <CheckerView {checker} />
+        </div>
+    </div>
+{:else if !tool}
     <ErrorDisplay status={404} />
 {:else}
     <div class="container py-4">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb small mb-0">
-                <li class="breadcrumb-item"><a href="/tools/">{$t("Developer tools", "Entwickler-Tools")}</a></li>
+                <li class="breadcrumb-item"><a href="/tools/">{$t("Tools", "Tools")}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{tool.title[index]}</li>
             </ol>
         </nav>

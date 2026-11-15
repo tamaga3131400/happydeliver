@@ -31,6 +31,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"git.happydns.org/happyDeliver/internal/api"
+	"git.happydns.org/happyDeliver/internal/checker"
 	"git.happydns.org/happyDeliver/internal/config"
 	"git.happydns.org/happyDeliver/internal/lmtp"
 	"git.happydns.org/happyDeliver/internal/storage"
@@ -91,6 +92,9 @@ func RunServer(cfg *config.Config) error {
 
 	apiGroup := router.Group("/api")
 	apiGroup.Use(publicRateLimit(func() uint { return cfg.Effective().RateLimit }))
+
+	// Network checks for /tools/ get a stricter per-IP limit.
+	checker.Register(apiGroup.Group("/tools", toolsRateLimit()))
 
 	// Register API routes
 	api.RegisterHandlers(apiGroup, handler)
