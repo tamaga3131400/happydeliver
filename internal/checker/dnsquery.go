@@ -30,21 +30,33 @@ type dnsAsk struct {
 	noCheck   bool // CD flag: ask a validating resolver to skip validation
 }
 
-// ask sends one DNS query over UDP and retries over TCP if the answer is truncated.
-func ask(ctx context.Context, q dnsAsk) (*dnsmessage.Message, time.Duration, error) {
+func dnsRequest(q dnsAsk, id uint16) (dnsmessage.Message, error) {
 	name, err := dnsmessage.NewName(strings.TrimSuffix(q.name, ".") + ".")
 	if err != nil {
-		return nil, 0, err
+		return dnsmessage.Message{}, err
 	}
-	id := uint16(time.Now().UnixNano())
 	var opt dnsmessage.ResourceHeader
 	if err := opt.SetEDNS0(1232, dnsmessage.RCodeSuccess, q.dnssec); err != nil {
-		return nil, 0, err
+		return dnsmessage.Message{}, err
 	}
-	msg := dnsmessage.Message{
+	return dnsmessage.Message{
 		Header:      dnsmessage.Header{ID: id, RecursionDesired: q.recursive, CheckingDisabled: q.noCheck},
 		Questions:   []dnsmessage.Question{{Name: name, Type: q.qtype, Class: dnsmessage.ClassINET}},
 		Additionals: []dnsmessage.Resource{{Header: opt, Body: &dnsmessage.OPTResource{}}},
+	}, nil
+}
+
+func matchesDNSReply(reply *dnsmessage.Message, request dnsmessage.Message) bool {
+	return reply.Response && reply.ID == request.ID && len(reply.Questions) == 1 &&
+		strings.EqualFold(reply.Questions[0].Name.String(), request.Questions[0].Name.String()) &&
+		reply.Questions[0].Type == request.Questions[0].Type && reply.Questions[0].Class == dnsmessage.ClassINET
+}
+
+// ask sends one DNS query over UDP and retries over TCP if the answer is truncated.
+func ask(ctx context.Context, q dnsAsk) (*dnsmessage.Message, time.Duration, error) {
+	msg, err := dnsRequest(q, uint16(time.Now().UnixNano()))
+	if err != nil {
+		return nil, 0, err
 	}
 	packet, err := msg.Pack()
 	if err != nil {
@@ -52,14 +64,14 @@ func ask(ctx context.Context, q dnsAsk) (*dnsmessage.Message, time.Duration, err
 	}
 	server := net.JoinHostPort(q.server.String(), "53")
 	start := time.Now()
-	reply, err := askOver(ctx, "udp", server, packet, id)
+	reply, err := askOver(ctx, "udp", server, packet, msg)
 	if err == nil && reply.Truncated {
-		reply, err = askOver(ctx, "tcp", server, packet, id)
+		reply, err = askOver(ctx, "tcp", server, packet, msg)
 	}
 	return reply, time.Since(start), err
 }
 
-func askOver(ctx context.Context, network, server string, packet []byte, id uint16) (*dnsmessage.Message, error) {
+func askOver(ctx context.Context, network, server string, packet []byte, request dnsmessage.Message) (*dnsmessage.Message, error) {
 	conn, err := (&net.Dialer{Timeout: 4 * time.Second}).DialContext(ctx, network, server)
 	if err != nil {
 		return nil, err
@@ -90,7 +102,7 @@ func askOver(ctx context.Context, network, server string, packet []byte, id uint
 		if err := reply.Unpack(buf); err != nil {
 			return nil, err
 		}
-		if reply.ID != id {
+		if !matchesDNSReply(&reply, request) {
 			return nil, errors.New("unexpected DNS answer")
 		}
 		return &reply, nil
@@ -106,7 +118,7 @@ func askOver(ctx context.Context, network, server string, packet []byte, id uint
 			return nil, err
 		}
 		var reply dnsmessage.Message
-		if reply.Unpack(buf[:n]) == nil && reply.ID == id {
+		if reply.Unpack(buf[:n]) == nil && matchesDNSReply(&reply, request) {
 			return &reply, nil
 		}
 	}

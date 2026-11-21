@@ -294,7 +294,7 @@ func TestGetBlacklistScore(t *testing.T) {
 				IPsChecked:  []string{"198.51.100.1"},
 				ListedCount: 1,
 			},
-			expectedScore: 84, // 100 - 1*100/6 = 84 (integer division: 100/6=16)
+			expectedScore: 80, // 100 - 1*100/5 = 80
 		},
 		{
 			name: "Listed on 2 RBLs",
@@ -302,7 +302,7 @@ func TestGetBlacklistScore(t *testing.T) {
 				IPsChecked:  []string{"198.51.100.1"},
 				ListedCount: 2,
 			},
-			expectedScore: 67, // 100 - 2*100/6 = 67 (integer division: 200/6=33)
+			expectedScore: 60, // 100 - 2*100/5 = 60
 		},
 		{
 			name: "Listed on 3 RBLs",
@@ -310,7 +310,7 @@ func TestGetBlacklistScore(t *testing.T) {
 				IPsChecked:  []string{"198.51.100.1"},
 				ListedCount: 3,
 			},
-			expectedScore: 50, // 100 - 3*100/6 = 50 (integer division: 300/6=50)
+			expectedScore: 40, // 100 - 3*100/5 = 40
 		},
 		{
 			name: "Listed on 4+ RBLs",
@@ -318,7 +318,7 @@ func TestGetBlacklistScore(t *testing.T) {
 				IPsChecked:  []string{"198.51.100.1"},
 				ListedCount: 4,
 			},
-			expectedScore: 34, // 100 - 4*100/6 = 34 (integer division: 400/6=66)
+			expectedScore: 20, // 100 - 4*100/5 = 20
 		},
 	}
 
@@ -437,5 +437,12 @@ func TestDefaultRBLs(t *testing.T) {
 		if !found {
 			t.Errorf("DefaultRBLs should contain %s", expected)
 		}
+	}
+}
+
+func TestRetiredRBLIsIgnoredInSavedSettings(t *testing.T) {
+	r := NewRBLChecker(time.Second, []string{"DNSBL.SORBS.NET.", "zen.spamhaus.org"}, false)
+	if len(r.RBLs) != 1 || r.RBLs[0] != "zen.spamhaus.org" {
+		t.Fatalf("unexpected active zones: %v", r.RBLs)
 	}
 }

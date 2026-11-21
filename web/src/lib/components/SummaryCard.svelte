@@ -322,7 +322,7 @@
             dmarcRecord &&
             dmarcRecord.valid &&
             dmarcRecord.policy != "none" &&
-            (!bimiResult || bimiResult.result !== "skipped")
+            String(bimiResult?.result) !== "skipped"
         ) {
             const bimiRecord = report.dns_results?.bimi_record;
             if (bimiRecord?.valid) {
@@ -332,7 +332,7 @@
                     highlight: { color: "good", bold: true },
                     link: "#dns-bimi",
                 });
-                if (bimiResult.details && bimiResult.details.indexOf("declined") == 0) {
+                if (bimiResult?.details?.startsWith("declined")) {
                     segments.push({ text: " declined to participate" });
                 } else if (bimiResult?.result === "fail") {
                     segments.push({ text: " but " });

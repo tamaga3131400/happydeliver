@@ -11,6 +11,7 @@
     let loading = $state(true);
     let error = $state<string | null>(null);
     let result = $state<BlacklistCheckResponse | null>(null);
+    let unavailable = $derived(result?.checks.filter((check) => Boolean(check.error)).length ?? 0);
 
     async function analyzeIP() {
         loading = true;
@@ -29,7 +30,7 @@
             });
 
             if (response.response.ok) {
-                result = response.data;
+                result = response.data ?? null;
             } else if (response.error) {
                 error = response.error.message || "Failed to check IP address";
             }
@@ -109,7 +110,15 @@
                                         <span class="font-monospace text-truncate">{result.ip}</span
                                         >
                                     </h2>
-                                    {#if result.listed_count === 0}
+                                    {#if unavailable > 0}
+                                        <div class="alert alert-warning d-inline-block mb-2" role="status">
+                                            {$t(
+                                                `${unavailable} of ${result.checks.length} lists could not be checked.`,
+                                                `${unavailable} von ${result.checks.length} Sperrlisten konnten nicht geprüft werden.`,
+                                            )}
+                                        </div>
+                                    {/if}
+                                    {#if result.listed_count === 0 && unavailable === 0}
                                         <div class="alert alert-success mb-0 d-inline-block">
                                             <i class="bi bi-check-circle me-2"></i>
                                             <strong>{$t("Not Listed", "Kein Eintrag")}</strong>
@@ -120,7 +129,7 @@
                                                 )}
                                             </p>
                                         </div>
-                                    {:else}
+                                    {:else if result.listed_count > 0}
                                         <div class="alert alert-danger mb-0 d-inline-block">
                                             <i class="bi bi-exclamation-triangle me-2"></i>
                                             <strong
@@ -131,14 +140,15 @@
                                             >
                                             <p class="mb-0 mt-1 small">
                                                 This IP address is listed on {result.listed_count} of
-                                                {result.checks.length} checked blacklist{result
-                                                    .checks.length > 1
+                                                {result.checks.length - unavailable} checked blacklist{result
+                                                    .checks.length - unavailable > 1
                                                     ? "s"
                                                     : ""}.
                                             </p>
                                         </div>
                                     {/if}
                                 </div>
+                                {#if unavailable === 0}
                                 <div class="offset-md-3 col-md-3 text-center">
                                     <div
                                         class="p-2 rounded text-center summary-card"
@@ -151,6 +161,7 @@
                                         >
                                     </div>
                                 </div>
+                                {/if}
                             </div>
                             <div class="d-flex justify-content-end me-lg-5">
                                 <TinySurvey
@@ -175,7 +186,7 @@
                                 <i class="bi bi-info-circle me-2"></i>
                                 {$t("What This Means", "Was das Ergebnis bedeutet")}
                             </h3>
-                            {#if result.listed_count === 0}
+                            {#if result.listed_count === 0 && unavailable === 0}
                                 <p class="mb-3">
                                     <strong>{$t("Good news!", "Keine Einträge gefunden.")}</strong>
                                     {$t(

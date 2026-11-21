@@ -22,6 +22,8 @@
 package analyzer
 
 import (
+	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -339,5 +341,44 @@ func TestExtractDMARCPercentage(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type dmarcFixture struct {
+	DNSResolver
+	records map[string][]string
+	failure string
+}
+
+func (f dmarcFixture) LookupTXT(_ context.Context, owner string) ([]string, error) {
+	if f.failure == owner {
+		return nil, &net.DNSError{Err: "temporary error", IsTemporary: true}
+	}
+	if records, ok := f.records[owner]; ok {
+		return records, nil
+	}
+	return nil, &net.DNSError{Err: "not found", IsNotFound: true}
+}
+
+func TestDomainDMARCShowsInheritedPolicy(t *testing.T) {
+	f := dmarcFixture{records: map[string][]string{
+		"_dmarc.example.com":        {"v=DMARC1; sp=reject; p=none"},
+		"_dmarc.direct.example.com": {"v=DMARC1; p=quarantine"},
+	}}
+	a := NewDNSAnalyzerWithResolver(time.Second, f)
+	inherited := a.domainDMARCRecord("www.example.com")
+	if !inherited.Valid || inherited.InheritedFrom == nil || *inherited.InheritedFrom != "example.com" ||
+		inherited.Policy == nil || *inherited.Policy != api.DMARCRecordPolicyReject {
+		t.Fatalf("wrong inherited policy: %+v", inherited)
+	}
+	direct := a.domainDMARCRecord("direct.example.com")
+	if !direct.Valid || direct.InheritedFrom != nil || *direct.Policy != api.DMARCRecordPolicyQuarantine {
+		t.Fatalf("wrong direct policy: %+v", direct)
+	}
+	f.failure = "_dmarc.www.example.com"
+	a = NewDNSAnalyzerWithResolver(time.Second, f)
+	failed := a.domainDMARCRecord("www.example.com")
+	if failed.Valid || failed.InheritedFrom != nil || failed.Error == nil {
+		t.Fatalf("temporary DNS error mistaken for a missing record: %+v", failed)
 	}
 }

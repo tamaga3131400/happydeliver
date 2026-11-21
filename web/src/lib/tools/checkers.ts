@@ -189,8 +189,8 @@ export const checkers: Checker[] = [
         icon: "person-vcard",
         title: T("Whois / RDAP lookup", "Whois-/RDAP-Abfrage"),
         description: T(
-            "Registrar, dates, status and name servers of a domain, or the owner of an IP network.",
-            "Registrar, Daten, Status und Nameserver einer Domain oder Inhaber eines IP-Netzes.",
+            "Registration of a domain or IP network. For a subdomain, the registered parent domain is looked up.",
+            "Registrierung einer Domain oder eines IP-Netzes. Bei Subdomains wird die registrierte übergeordnete Domain abgefragt.",
         ),
         input: "text",
         placeholder: "example.com / 192.0.2.1",
@@ -286,12 +286,13 @@ export const checkers: Checker[] = [
         icon: "diagram-2",
         title: T("Subdomain finder", "Subdomains finden"),
         description: T(
-            "Names found in public TLS certificates (Certificate Transparency).",
-            "Namen aus öffentlichen TLS-Zertifikaten (Certificate Transparency).",
+            "Names found in public TLS certificates. Enter the parent domain to search for related subdomains.",
+            "Namen aus öffentlichen TLS-Zertifikaten. Gib die übergeordnete Domain ein, um zugehörige Subdomains zu finden.",
         ),
         input: "text",
         placeholder: "example.com",
         example: "zenmail.eu",
+        choice: { param: "mode", label: "CT / DNS", values: ["CT", "CT + DNS"] },
     },
     {
         slug: "uptime",

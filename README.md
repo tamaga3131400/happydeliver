@@ -295,6 +295,18 @@ This project is funded through [NGI Zero Core](https://nlnet.nl/core), a fund es
 
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)
 
+## Deliver Zenmail DNS tools
+
+The public tools use external DNS directly to avoid resolving the deployment's
+own hostname to a private container address. The normal lookup first tries the
+external resolvers configured for the container, then DNS over HTTPS. Set
+`HAPPYDELIVER_TOOLS_DNS_SERVERS` to a comma-separated list of up to two resolver IP
+addresses if the auto-detected servers cannot be used from the container.
+With Docker, verify connectivity from the container to the configured resolvers
+(UDP and TCP port 53) and to the public DNS-over-HTTPS endpoints (TCP port 443).
+DNS propagation checks use HTTPS for the recursive resolvers and query
+authoritative servers directly on port 53 when reachable.
+
 ## Deliver Zenmail Administration
 
 The admin page at `/admin` is disabled unless configured. Set the following on

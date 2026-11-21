@@ -2,7 +2,9 @@ package checker
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"net/url"
 	"slices"
@@ -45,7 +47,11 @@ func ipLookup(ctx context.Context, q url.Values) (*Result, error) {
 			return nil, fail("Please enter an IP address or domain.", "Bitte gib eine IP-Adresse oder Domain ein.")
 		}
 		ips, err := lookupIPs(ctx, domain)
-		if err != nil || len(ips) == 0 {
+		if err != nil {
+			var dnsErr *net.DNSError
+			if !errors.As(err, &dnsErr) || !dnsErr.IsNotFound {
+				return nil, err
+			}
 			return nil, fail("The domain has no A or AAAA record.", "Die Domain hat keinen A- oder AAAA-Eintrag.")
 		}
 		for _, ip := range ips {
@@ -73,8 +79,11 @@ func ipLookup(ctx context.Context, q url.Values) (*Result, error) {
 		} else {
 			ptr := strings.TrimSuffix(names[0], ".")
 			section.Rows = append(section.Rows, row("Reverse DNS (PTR)", "Reverse DNS (PTR)", ptr))
-			forward, _ := lookupIPs(ctx, ptr)
-			if slices.ContainsFunc(forward, func(ip netip.Addr) bool { return ip.Unmap() == addr }) {
+			forward, err := lookupIPs(ctx, ptr)
+			var dnsErr *dnsUnavailable
+			if errors.As(err, &dnsErr) {
+				section.Rows = append(section.Rows, dnsMissing("Forward-confirmed (FCrDNS)", "Vorwärts bestätigt (FCrDNS)"))
+			} else if slices.ContainsFunc(forward, func(ip netip.Addr) bool { return ip.Unmap() == addr }) {
 				section.Rows = append(section.Rows, noteRow("Forward-confirmed (FCrDNS)", "Vorwärts bestätigt (FCrDNS)", "yes", "ja", "ok"))
 			} else {
 				section.Rows = append(section.Rows, noteRow("Forward-confirmed (FCrDNS)", "Vorwärts bestätigt (FCrDNS)", "no – PTR name does not point back", "nein – der PTR-Name zeigt nicht zurück", "warn"))

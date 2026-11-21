@@ -23,43 +23,93 @@ package analyzer
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"regexp"
 	"strings"
 
 	"git.happydns.org/happyDeliver/internal/api"
 )
 
-// checkapi.DMARCRecord looks up and validates DMARC record for a domain
 func (d *DNSAnalyzer) checkDMARCRecord(domain string) *api.DMARCRecord {
-	// DMARC records are at: _dmarc.domain
-	dmarcDomain := fmt.Sprintf("_dmarc.%s", domain)
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout)
+	defer cancel()
+	record := d.lookupDMARCRecord(ctx, domain)
+	if record.Record == nil && record.Error == nil {
+		record.Error = api.PtrTo("No DMARC record found")
+	}
+	return record
+}
 
+func (d *DNSAnalyzer) domainDMARCRecord(domain string) *api.DMARCRecord {
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout)
 	defer cancel()
 
-	txtRecords, err := d.resolver.LookupTXT(ctx, dmarcDomain)
-	if err != nil {
-		return &api.DMARCRecord{
-			Valid: false,
-			Error: api.PtrTo(fmt.Sprintf("Failed to lookup DMARC record: %v", err)),
-		}
+	exact := d.lookupDMARCRecord(ctx, domain)
+	if exact.Record != nil || exact.Error != nil {
+		return exact
 	}
 
-	// Find DMARC record (starts with "v=DMARC1")
-	var dmarcRecord string
-	for _, txt := range txtRecords {
-		if strings.HasPrefix(txt, "v=DMARC1") {
-			dmarcRecord = txt
+	// Find a published policy above a name without its own DMARC record.
+	// Limit the walk to seven parents, as in the DMARC policy tree walk.
+	var inherited *api.DMARCRecord
+	var policyDomain string
+	labels := strings.Split(strings.TrimSuffix(domain, "."), ".")
+	parents := labels[len(labels)-min(len(labels)-1, 7):]
+	for i := range parents {
+		parent := strings.Join(parents[i:], ".")
+		candidate := d.lookupDMARCRecord(ctx, parent)
+		if candidate.Record == nil && candidate.Error != nil {
+			return candidate
+		}
+		if !candidate.Valid {
+			continue
+		}
+		psd := dmarcTag(*candidate.Record, "psd")
+		if psd == "y" && inherited != nil {
+			break
+		}
+		inherited, policyDomain = candidate, parent
+		if psd == "n" || psd == "y" {
 			break
 		}
 	}
+	if inherited == nil {
+		return &api.DMARCRecord{Error: api.PtrTo("No DMARC record found")}
+	}
+	inherited.InheritedFrom = &policyDomain
+	if inherited.SubdomainPolicy != nil {
+		inherited.Policy = api.PtrTo(api.DMARCRecordPolicy(*inherited.SubdomainPolicy))
+		inherited.SubdomainPolicy = nil
+	}
+	return inherited
+}
 
-	if dmarcRecord == "" {
-		return &api.DMARCRecord{
-			Valid: false,
-			Error: api.PtrTo("No DMARC record found"),
+func (d *DNSAnalyzer) lookupDMARCRecord(ctx context.Context, domain string) *api.DMARCRecord {
+	txtRecords, err := d.resolver.LookupTXT(ctx, "_dmarc."+strings.TrimSuffix(domain, "."))
+	if err != nil {
+		var dnsErr *net.DNSError
+		if errors.As(err, &dnsErr) && dnsErr.IsNotFound {
+			return &api.DMARCRecord{}
 		}
+		return &api.DMARCRecord{
+			Error: api.PtrTo(fmt.Sprintf("Failed to lookup DMARC record: %v", err)),
+		}
+	}
+	var dmarcRecord string
+	for _, txt := range txtRecords {
+		first, _, _ := strings.Cut(txt, ";")
+		if !strings.EqualFold(strings.TrimSpace(first), "v=DMARC1") {
+			continue
+		}
+		if dmarcRecord != "" {
+			return &api.DMARCRecord{Error: api.PtrTo("Multiple DMARC records found")}
+		}
+		dmarcRecord = txt
+	}
+	if dmarcRecord == "" {
+		return &api.DMARCRecord{}
 	}
 
 	// Extract policy
@@ -100,15 +150,23 @@ func (d *DNSAnalyzer) checkDMARCRecord(domain string) *api.DMARCRecord {
 	}
 }
 
-// extractDMARCPolicy extracts the policy from a DMARC record
-func (d *DNSAnalyzer) extractDMARCPolicy(record string) string {
-	// Look for p=none, p=quarantine, or p=reject
-	re := regexp.MustCompile(`p=(none|quarantine|reject)`)
-	matches := re.FindStringSubmatch(record)
-	if len(matches) > 1 {
-		return matches[1]
+func dmarcTag(record, key string) string {
+	for _, part := range strings.Split(record, ";") {
+		k, v, ok := strings.Cut(part, "=")
+		if ok && strings.EqualFold(strings.TrimSpace(k), key) {
+			return strings.ToLower(strings.TrimSpace(v))
+		}
 	}
-	return "unknown"
+	return ""
+}
+
+func (d *DNSAnalyzer) extractDMARCPolicy(record string) string {
+	switch policy := dmarcTag(record, "p"); policy {
+	case "none", "quarantine", "reject":
+		return policy
+	default:
+		return "unknown"
+	}
 }
 
 // extractDMARCSPFAlignment extracts SPF alignment mode from a DMARC record
@@ -146,15 +204,12 @@ func (d *DNSAnalyzer) extractDMARCDKIMAlignment(record string) *api.DMARCRecordD
 // extractDMARCSubdomainPolicy extracts subdomain policy from a DMARC record
 // Returns the sp tag value or nil if not specified (defaults to main policy)
 func (d *DNSAnalyzer) extractDMARCSubdomainPolicy(record string) *api.DMARCRecordSubdomainPolicy {
-	// Look for sp=none, sp=quarantine, or sp=reject
-	re := regexp.MustCompile(`sp=(none|quarantine|reject)`)
-	matches := re.FindStringSubmatch(record)
-	if len(matches) > 1 {
-		return api.PtrTo(api.DMARCRecordSubdomainPolicy(matches[1]))
+	switch policy := dmarcTag(record, "sp"); policy {
+	case "none", "quarantine", "reject":
+		return api.PtrTo(api.DMARCRecordSubdomainPolicy(policy))
+	default:
+		return nil
 	}
-	// If sp is not specified, it defaults to the main policy (p tag)
-	// Return nil to indicate it's using the default
-	return nil
 }
 
 // extractDMARCPercentage extracts the percentage from a DMARC record
@@ -178,17 +233,8 @@ func (d *DNSAnalyzer) extractDMARCPercentage(record string) *int {
 
 // validateDMARC performs basic DMARC record validation
 func (d *DNSAnalyzer) validateDMARC(record string) bool {
-	// Must start with v=DMARC1
-	if !strings.HasPrefix(record, "v=DMARC1") {
-		return false
-	}
-
-	// Must have a policy tag
-	if !strings.Contains(record, "p=") {
-		return false
-	}
-
-	return true
+	first, _, _ := strings.Cut(record, ";")
+	return strings.EqualFold(strings.TrimSpace(first), "v=DMARC1") && d.extractDMARCPolicy(record) != "unknown"
 }
 
 func (d *DNSAnalyzer) calculateDMARCScore(results *api.DNSResults) (score int) {

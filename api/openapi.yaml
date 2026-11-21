@@ -1139,6 +1139,10 @@ components:
           enum: [none, quarantine, reject, unknown]
           description: DMARC policy
           example: "quarantine"
+        inherited_from:
+          type: string
+          description: Domain publishing the applicable policy when inherited by the tested subdomain
+          example: "example.com"
         subdomain_policy:
           type: string
           enum: [none, quarantine, reject, unknown]

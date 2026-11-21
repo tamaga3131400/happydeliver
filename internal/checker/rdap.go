@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 // RDAP is the structured successor of WHOIS. The responsible server is
@@ -193,6 +195,11 @@ func whoisLookup(ctx context.Context, q url.Values) (*Result, error) {
 		if err != nil {
 			return nil, err
 		}
+		registration, ok := registrationDomain(domain)
+		if !ok {
+			return nil, fail("Enter a registrable domain such as example.com.", "Gib eine registrierbare Domain wie example.com ein.")
+		}
+		domain = registration
 		b, err := loadBootstrap(ctx, "dns")
 		if err != nil {
 			return nil, err
@@ -216,7 +223,7 @@ func whoisLookup(ctx context.Context, q url.Values) (*Result, error) {
 	defer resp.Body.Close()
 	switch {
 	case resp.StatusCode == http.StatusNotFound:
-		return nil, fail("No registration found. The domain may be unregistered.", "Keine Registrierung gefunden. Die Domain ist möglicherweise frei.")
+		return nil, fail("No registration found for the requested domain or network.", "Für die angefragte Domain oder das Netzwerk wurde keine Registrierung gefunden.")
 	case resp.StatusCode != http.StatusOK:
 		return nil, fmt.Errorf("RDAP server answered %s", resp.Status)
 	}
@@ -281,4 +288,25 @@ func whoisLookup(ctx context.Context, q url.Values) (*Result, error) {
 	section.Rows = slices.DeleteFunc(section.Rows, func(r Row) bool { return r.Value == "" && r.Note == nil })
 	source := Section{Title: T("Source", "Quelle"), Rows: []Row{row("RDAP", "RDAP", target)}}
 	return &Result{Sections: []Section{section, source}}, nil
+}
+
+// RDAP registries know the registered name, not hosts under that name.
+// Ignore private suffix rules (for example github.io hosts): those names
+// are administered below the actual registered domain.
+func registrationDomain(domain string) (string, bool) {
+	icannSuffix := domain
+	for strings.Contains(icannSuffix, ".") {
+		suffix, icann := publicsuffix.PublicSuffix(icannSuffix)
+		if icann {
+			icannSuffix = suffix
+			break
+		}
+		_, icannSuffix, _ = strings.Cut(suffix, ".")
+	}
+	prefix, ok := strings.CutSuffix(domain, "."+icannSuffix)
+	if !ok || prefix == "" {
+		return "", false
+	}
+	label := prefix[strings.LastIndex(prefix, ".")+1:]
+	return label + "." + icannSuffix, true
 }

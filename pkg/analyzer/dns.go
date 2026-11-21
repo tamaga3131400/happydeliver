@@ -144,7 +144,7 @@ func (d *DNSAnalyzer) AnalyzeDomainOnly(domain string) *api.DNSResults {
 	results.SpfRecords = d.checkSPFRecords(domain)
 
 	// Check DMARC record
-	results.DmarcRecord = d.checkDMARCRecord(domain)
+	results.DmarcRecord = d.domainDMARCRecord(domain)
 
 	// Check BIMI record with default selector
 	results.BimiRecord = d.checkBIMIRecord(domain, "default")

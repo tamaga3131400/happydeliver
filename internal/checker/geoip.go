@@ -2,7 +2,9 @@ package checker
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"net/url"
 	"slices"
@@ -50,6 +52,10 @@ func publicAddresses(ctx context.Context, input string) ([]netip.Addr, error) {
 	}
 	ips, err := lookupIPs(ctx, domain)
 	if err != nil {
+		var dnsErr *net.DNSError
+		if !errors.As(err, &dnsErr) || !dnsErr.IsNotFound {
+			return nil, err
+		}
 		return nil, fail("The domain has no A or AAAA record.", "Die Domain hat keinen A- oder AAAA-Eintrag.")
 	}
 	var out []netip.Addr

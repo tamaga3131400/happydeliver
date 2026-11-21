@@ -12,7 +12,7 @@
         headerScore?: number;
     }
 
-    let { dmarcRecord, headerAnalysis, headerGrade, headerScore, xAlignedFrom }: Props = $props();
+    let { dmarcRecord, headerAnalysis, headerGrade, headerScore }: Props = $props();
 </script>
 
 <div class="card shadow-sm" id="header-details">

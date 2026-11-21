@@ -48,6 +48,10 @@ func (e *userError) Error() string { return e.msg[0] }
 
 func fail(en, de string) error { return &userError{T(en, de)} }
 
+type checkUnavailable struct{ msg Text }
+
+func (e *checkUnavailable) Error() string { return e.msg[0] }
+
 var errBlocked = errors.New("target address is not public or port is not allowed")
 
 type check func(ctx context.Context, q url.Values) (*Result, error)
@@ -100,6 +104,9 @@ func handle(c *gin.Context) {
 	result, err := run(ctx, c.Request.URL.Query())
 	if err != nil {
 		var ue *userError
+		var dnsErr *dnsUnavailable
+		var unavailable *checkUnavailable
+		var notFound *net.DNSError
 		switch {
 		case errors.As(err, &ue):
 			c.JSON(http.StatusBadRequest, gin.H{"message": ue.msg})
@@ -107,6 +114,17 @@ func handle(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"message": T(
 				"The target resolves to a non-public address or uses a port that is not allowed.",
 				"Das Ziel zeigt auf eine nicht öffentliche Adresse oder nutzt einen nicht erlaubten Port.")})
+		case errors.Is(ctx.Err(), context.DeadlineExceeded):
+			c.JSON(http.StatusGatewayTimeout, gin.H{"message": T("The check timed out.", "Die Prüfung hat zu lange gedauert.")})
+		case errors.As(err, &unavailable):
+			c.JSON(http.StatusBadGateway, gin.H{"message": unavailable.msg})
+		case errors.As(err, &dnsErr):
+			c.JSON(http.StatusBadGateway, gin.H{"message": T(
+				"The DNS resolvers could not answer. Please try again shortly.",
+				"Die DNS-Resolver konnten die Abfrage nicht beantworten. Bitte versuche es gleich erneut.")})
+		case errors.As(err, &notFound) && notFound.IsNotFound:
+			c.JSON(http.StatusBadRequest, gin.H{"message": T(
+				"The name has no A or AAAA record.", "Der Name hat keinen A- oder AAAA-Eintrag.")})
 		case errors.Is(err, context.DeadlineExceeded):
 			c.JSON(http.StatusGatewayTimeout, gin.H{"message": T("The check timed out.", "Die Prüfung hat zu lange gedauert.")})
 		default:

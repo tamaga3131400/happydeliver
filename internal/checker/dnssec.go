@@ -30,20 +30,32 @@ func dnssecCheck(ctx context.Context, q url.Values) (*Result, error) {
 		return nil, err
 	}
 	validator := publicResolvers[1].addr // Cloudflare validates DNSSEC
-
-	ds, _, dsErr := ask(ctx, dnsAsk{server: validator, name: domain, qtype: typeDS, recursive: true, dnssec: true, noCheck: true})
-	keys, _, keyErr := ask(ctx, dnsAsk{server: validator, name: domain, qtype: typeDNSKEY, recursive: true, dnssec: true, noCheck: true})
-	if dsErr != nil && keyErr != nil {
-		return nil, dsErr
+	zone, err := dnsZone(ctx, domain, func(ctx context.Context, name string, qtype dnsmessage.Type) (*dnsmessage.Message, error) {
+		// Even a zone with broken signatures should be discoverable for diagnosis.
+		reply, _, err := askPublic(ctx, dnsAsk{server: validator, name: name, qtype: qtype, recursive: true, dnssec: true, noCheck: true})
+		if err == nil && name == domain && reply.RCode == dnsmessage.RCodeNameError {
+			return nil, fail("This DNS name does not exist.", "Dieser DNS-Name existiert nicht.")
+		}
+		return usableDNS(reply, err)
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	setup := Section{Title: T("Setup", "Einrichtung")}
+	ds, _, dsErr := askPublic(ctx, dnsAsk{server: validator, name: zone, qtype: typeDS, recursive: true, dnssec: true, noCheck: true})
+	keys, _, keyErr := askPublic(ctx, dnsAsk{server: validator, name: zone, qtype: typeDNSKEY, recursive: true, dnssec: true, noCheck: true})
+	ds, dsErr = usableDNS(ds, dsErr)
+	keys, keyErr = usableDNS(keys, keyErr)
+
+	setup := Section{Title: T("Setup", "Einrichtung"), Rows: []Row{row("DNS zone", "DNS-Zone", zone)}}
 	dsCount := 0
 	if dsErr == nil {
 		dsCount = countType(ds, typeDS)
 	}
 	var algs []string
-	if dsCount > 0 {
+	if dsErr != nil {
+		setup.Rows = append(setup.Rows, dnsMissing("DS record at the registry", "DS-Eintrag bei der Registry"))
+	} else if dsCount > 0 {
 		for _, d := range unknownData(ds, typeDS) {
 			if len(d) >= 4 {
 				algs = append(algs, algorithmName(d[2]))
@@ -67,7 +79,9 @@ func dnssecCheck(ctx context.Context, q url.Values) (*Result, error) {
 			algs = append(algs, algorithmName(d[3]))
 		}
 	}
-	if ksk+zsk > 0 {
+	if keyErr != nil {
+		setup.Rows = append(setup.Rows, dnsMissing("DNSKEY", "DNSKEY"))
+	} else if ksk+zsk > 0 {
 		setup.Rows = append(setup.Rows, row("DNSKEY", "DNSKEY", fmt.Sprintf("%d KSK, %d ZSK", ksk, zsk), "ok"))
 	} else {
 		status := ""
@@ -94,18 +108,20 @@ func dnssecCheck(ctx context.Context, q url.Values) (*Result, error) {
 		go func() {
 			defer wg.Done()
 			o := outcome{label: T(r.name, r.name)}
-			reply, _, err := ask(ctx, dnsAsk{server: r.addr, name: domain, qtype: dnsmessage.TypeSOA, recursive: true, dnssec: true})
+			reply, _, err := askPublic(ctx, dnsAsk{server: r.addr, name: zone, qtype: dnsmessage.TypeSOA, recursive: true, dnssec: true})
 			switch {
 			case err != nil:
-				o.status, o.note = "warn", Text{"no answer: " + err.Error(), "keine Antwort: " + err.Error()}
+				o.status, o.note = "warn", Text{"no answer", "keine Antwort"}
 			case reply.RCode == dnsmessage.RCodeServerFailure:
 				// SERVFAIL that disappears with CD set means the signatures are broken.
-				retry, _, err := ask(ctx, dnsAsk{server: r.addr, name: domain, qtype: dnsmessage.TypeSOA, recursive: true, dnssec: true, noCheck: true})
+				retry, _, err := askPublic(ctx, dnsAsk{server: r.addr, name: zone, qtype: dnsmessage.TypeSOA, recursive: true, dnssec: true, noCheck: true})
 				if err == nil && retry.RCode == dnsmessage.RCodeSuccess {
 					o.status, o.note = "bad", Text{"validation fails (bogus) – the domain is unreachable for validating resolvers", "Validierung schlägt fehl (bogus) – die Domain ist für validierende Resolver nicht erreichbar"}
 				} else {
-					o.status, o.note = "bad", Text{"server failure", "Serverfehler"}
+					o.status, o.note = "warn", Text{"server failure", "Serverfehler"}
 				}
+			case reply.RCode != dnsmessage.RCodeSuccess:
+				o.status, o.note = "warn", Text{"no usable DNS answer", "keine auswertbare DNS-Antwort"}
 			case reply.AuthenticData:
 				o.status, o.note = "ok", Text{"signed and valid", "signiert und gültig"}
 			default:
@@ -134,7 +150,7 @@ func dnssecCheck(ctx context.Context, q url.Values) (*Result, error) {
 			"fehlerhaft – Schlüssel reparieren oder den DS-Eintrag beim Registrar entfernen", "bad"))
 	case valid > 0:
 		summary.Rows = append(summary.Rows, noteRow("DNSSEC", "DNSSEC", "active and valid", "aktiv und gültig", "ok"))
-	case dsCount == 0:
+	case dsErr == nil && keyErr == nil && dsCount == 0:
 		summary.Rows = append(summary.Rows, noteRow("DNSSEC", "DNSSEC", "not enabled – recommended to protect DNS answers against forgery",
 			"nicht aktiviert – empfohlen, um DNS-Antworten gegen Fälschung zu schützen", "warn"))
 	default:

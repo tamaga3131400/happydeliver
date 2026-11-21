@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -44,7 +45,6 @@ type RBLChecker struct {
 var DefaultRBLs = []string{
 	"zen.spamhaus.org",       // Spamhaus combined list
 	"bl.spamcop.net",         // SpamCop
-	"dnsbl.sorbs.net",        // SORBS
 	"b.barracudacentral.org", // Barracuda
 	"cbl.abuseat.org",        // CBL (Composite Blocking List)
 	"dnsbl-1.uceprotect.net", // UCEPROTECT Level 1
@@ -58,6 +58,10 @@ func NewRBLChecker(timeout time.Duration, rbls []string, checkAllIPs bool) *RBLC
 	if len(rbls) == 0 {
 		rbls = DefaultRBLs
 	}
+	// Remove the retired zone even from installations with saved settings.
+	rbls = slices.DeleteFunc(slices.Clone(rbls), func(zone string) bool {
+		return strings.EqualFold(strings.TrimSuffix(strings.TrimSpace(zone), "."), "dnsbl.sorbs.net")
+	})
 	return &RBLChecker{
 		Timeout:     timeout,
 		RBLs:        rbls,
@@ -270,7 +274,7 @@ func (r *RBLChecker) reverseIP(ipStr string) string {
 
 // CalculateRBLScore calculates the blacklist contribution to deliverability
 func (r *RBLChecker) CalculateRBLScore(results *RBLResults) (int, string) {
-	if results == nil || len(results.IPsChecked) == 0 {
+	if results == nil || len(results.IPsChecked) == 0 || len(r.RBLs) == 0 {
 		// No IPs to check, give benefit of doubt
 		return 100, ""
 	}

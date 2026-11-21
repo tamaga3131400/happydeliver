@@ -3,7 +3,9 @@ package checker
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
@@ -30,6 +32,11 @@ func uptimeCheck(ctx context.Context, q url.Values) (*Result, error) {
 	start = time.Now()
 	resp, err := webClient.Do(req)
 	if err != nil {
+		var dnsErr *dnsUnavailable
+		var noAddress *net.DNSError
+		if errors.As(err, &dnsErr) || errors.As(err, &noAddress) || errors.Is(err, errBlocked) {
+			return nil, err
+		}
 		down := Section{Title: T("Result", "Ergebnis"), Rows: []Row{
 			noteRow("Status", "Status", "not reachable", "nicht erreichbar", "bad"),
 			row("Error", "Fehler", err.Error()),

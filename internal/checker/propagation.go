@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/net/dns/dnsmessage"
 )
@@ -36,33 +37,53 @@ type propagationAnswer struct {
 	values []string
 	err    string
 	auth   bool
+	nx     bool
 }
 
 // authoritativeServers returns up to three public addresses of the domain's name servers.
 func authoritativeServers(ctx context.Context, domain string) []publicResolver {
-	zone := domain
-	for strings.Count(zone, ".") >= 1 {
-		ns, _ := resolver.LookupNS(ctx, zone)
-		if len(ns) > 0 {
-			var out []publicResolver
-			for _, n := range ns {
-				host := strings.TrimSuffix(n.Host, ".")
-				addrs, _ := lookupIPs(ctx, host)
-				for _, a := range addrs {
-					if a.Is4() && isPublic(a) {
-						out = append(out, publicResolver{host, a})
-						break
-					}
-				}
-				if len(out) == 3 {
-					break
+	zone, err := dnsZone(ctx, domain, publicDNS)
+	if err != nil {
+		return nil
+	}
+	reply, err := publicDNS(ctx, zone, dnsmessage.TypeNS)
+	if err != nil {
+		return nil
+	}
+	var out []publicResolver
+	for _, host := range recordText(reply, dnsmessage.TypeNS) {
+		addrs, _ := lookupIPs(ctx, host)
+		for _, a := range addrs {
+			if isPublic(a) {
+				out = append(out, publicResolver{host, a})
+				break
+			}
+		}
+		if len(out) == 3 || ctx.Err() != nil {
+			break
+		}
+	}
+	return out
+}
+
+// A recursive SOA response can carry the enclosing zone in the authority section.
+func dnsZone(ctx context.Context, domain string, lookup func(context.Context, string, dnsmessage.Type) (*dnsmessage.Message, error)) (string, error) {
+	for name := domain; strings.Contains(name, "."); {
+		reply, err := lookup(ctx, name, dnsmessage.TypeSOA)
+		if err != nil {
+			return "", err
+		}
+		for _, section := range [][]dnsmessage.Resource{reply.Answers, reply.Authorities} {
+			for _, resource := range section {
+				owner := strings.ToLower(strings.TrimSuffix(resource.Header.Name.String(), "."))
+				if resource.Header.Type == dnsmessage.TypeSOA && (owner == domain || strings.HasSuffix(domain, "."+owner)) {
+					return owner, nil
 				}
 			}
-			return out
 		}
-		_, zone, _ = strings.Cut(zone, ".")
+		_, name, _ = strings.Cut(name, ".")
 	}
-	return nil
+	return "", fail("The enclosing DNS zone could not be determined.", "Die zuständige DNS-Zone konnte nicht ermittelt werden.")
 }
 
 func propagation(ctx context.Context, q url.Values) (*Result, error) {
@@ -80,8 +101,16 @@ func propagation(ctx context.Context, q url.Values) (*Result, error) {
 	}
 
 	targets := slices.Clone(publicResolvers)
-	auth := authoritativeServers(ctx, domain)
-	answers := make([]propagationAnswer, len(targets)+len(auth))
+	authCtx, cancel := context.WithTimeout(ctx, 6*time.Second)
+	defer cancel()
+	var auth []publicResolver
+	var authWG sync.WaitGroup
+	authWG.Add(1)
+	go func() {
+		defer authWG.Done()
+		auth = authoritativeServers(authCtx, domain)
+	}()
+	answers := make([]propagationAnswer, len(targets), len(targets)+3)
 	var wg sync.WaitGroup
 	query := func(i int, r publicResolver, isAuth bool) {
 		defer wg.Done()
@@ -89,13 +118,21 @@ func propagation(ctx context.Context, q url.Values) (*Result, error) {
 		if isAuth {
 			label = T(r.name+" (authoritative)", r.name+" (autoritativ)")
 		}
-		reply, took, err := ask(ctx, dnsAsk{server: r.addr, name: domain, qtype: qtype, recursive: !isAuth})
+		lookup := dnsAsk{server: r.addr, name: domain, qtype: qtype, recursive: !isAuth}
+		var reply *dnsmessage.Message
+		var took time.Duration
+		var err error
+		if isAuth {
+			reply, took, err = ask(ctx, lookup)
+		} else {
+			reply, took, err = askPublic(ctx, lookup)
+		}
 		a := propagationAnswer{label: label, auth: isAuth}
 		switch {
 		case err != nil:
-			a.err = err.Error()
+			a.err = "no response"
 		case reply.RCode == dnsmessage.RCodeNameError:
-			a.err = "NXDOMAIN"
+			a.nx = true
 		case reply.RCode != dnsmessage.RCodeSuccess:
 			a.err = reply.RCode.String()
 		default:
@@ -110,30 +147,50 @@ func propagation(ctx context.Context, q url.Values) (*Result, error) {
 		wg.Add(1)
 		go query(i, r, false)
 	}
+	wg.Wait()
+	authWG.Wait()
+	answers = answers[:len(targets)+len(auth)]
 	for i, r := range auth {
 		wg.Add(1)
 		go query(len(targets)+i, r, true)
 	}
 	wg.Wait()
 
-	// Reference: the authoritative answer, otherwise the most common one.
+	section, summary := summarizePropagation(domain, typeName, answers)
+	if len(auth) == 0 {
+		summary.Rows = append(summary.Rows, noteRow("Authoritative name servers", "Autoritative Nameserver",
+			"No authoritative name servers could be checked.", "Die autoritativen Nameserver konnten nicht geprüft werden.", "warn"))
+	}
+	return &Result{Sections: []Section{summary, section}}, nil
+}
+
+func answerKey(a propagationAnswer) string {
+	if a.nx {
+		return "NXDOMAIN"
+	}
+	return "records:" + strings.Join(a.values, "\n")
+}
+
+func summarizePropagation(domain, typeName string, answers []propagationAnswer) (Section, Section) {
 	counts := map[string]int{}
 	reference := ""
+	responded := 0
 	for _, a := range answers {
-		if a.err != "" {
-			continue
+		if a.err == "" {
+			key := answerKey(a)
+			if a.auth && reference == "" {
+				reference = key
+			}
+			counts[key]++
+			responded++
 		}
-		key := strings.Join(a.values, "\n")
-		if a.auth && reference == "" {
-			reference = key
-		}
-		counts[key]++
 	}
 	if reference == "" {
 		best := 0
-		for key, n := range counts {
-			if n > best {
-				best, reference = n, key
+		for _, a := range answers {
+			if a.err == "" && counts[answerKey(a)] > best {
+				reference = answerKey(a)
+				best = counts[reference]
 			}
 		}
 	}
@@ -143,12 +200,16 @@ func propagation(ctx context.Context, q url.Values) (*Result, error) {
 	for _, a := range answers {
 		r := Row{Label: a.label}
 		switch {
+		case a.err == "no response":
+			r.Note, r.Status = &Text{"no response", "keine Antwort"}, "warn"
 		case a.err != "":
-			r.Value, r.Status = a.err, "bad"
+			r.Value, r.Status = a.err, "warn"
+		case a.nx:
+			r.Note, r.Status = &Text{"name does not exist (NXDOMAIN)", "Name existiert nicht (NXDOMAIN)"}, statusFor(answerKey(a) == reference)
 		case len(a.values) == 0:
-			r.Note, r.Status = &Text{"no record", "kein Eintrag"}, statusFor(reference == "")
+			r.Note, r.Status = &Text{"no record of this type", "kein Eintrag dieses Typs"}, statusFor(answerKey(a) == reference)
 		default:
-			r.Value, r.Status = strings.Join(a.values, "\n"), statusFor(strings.Join(a.values, "\n") == reference)
+			r.Value, r.Status = strings.Join(a.values, "\n"), statusFor(answerKey(a) == reference)
 		}
 		if r.Status == "ok" {
 			same++
@@ -156,16 +217,25 @@ func propagation(ctx context.Context, q url.Values) (*Result, error) {
 		section.Rows = append(section.Rows, r)
 	}
 	summary := Section{Title: T("Summary", "Zusammenfassung")}
-	total := len(answers)
-	if same == total {
-		summary.Rows = append(summary.Rows, noteRow("Status", "Status", fmt.Sprintf("all %d servers give the same answer", total),
-			fmt.Sprintf("alle %d Server liefern dieselbe Antwort", total), "ok"))
-	} else {
+	switch {
+	case responded == 0:
 		summary.Rows = append(summary.Rows, noteRow("Status", "Status",
-			fmt.Sprintf("%d of %d servers differ – a change may still be propagating (TTL)", total-same, total),
-			fmt.Sprintf("%d von %d Servern weichen ab – eine Änderung ist evtl. noch nicht überall angekommen (TTL)", total-same, total), "warn"))
+			"No DNS server returned a usable answer.", "Kein DNS-Server hat eine auswertbare Antwort geliefert.", "bad"))
+	case same != responded:
+		summary.Rows = append(summary.Rows, noteRow("Status", "Status",
+			fmt.Sprintf("%d of %d usable answers differ.", responded-same, responded),
+			fmt.Sprintf("%d von %d auswertbaren Antworten weichen ab.", responded-same, responded), "warn"))
+	default:
+		summary.Rows = append(summary.Rows, noteRow("Status", "Status",
+			fmt.Sprintf("%d servers returned the same answer.", responded),
+			fmt.Sprintf("%d Server liefern dieselbe Antwort.", responded), statusFor(responded == len(answers) && responded > 1)))
 	}
-	return &Result{Sections: []Section{summary, section}}, nil
+	if unavailable := len(answers) - responded; unavailable > 0 {
+		summary.Rows = append(summary.Rows, noteRow("Unavailable", "Nicht auswertbar",
+			fmt.Sprintf("%d of %d servers", unavailable, len(answers)),
+			fmt.Sprintf("%d von %d Servern", unavailable, len(answers)), "warn"))
+	}
+	return section, summary
 }
 
 func statusFor(ok bool) string {

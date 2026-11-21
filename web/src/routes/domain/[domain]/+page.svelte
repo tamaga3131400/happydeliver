@@ -109,30 +109,9 @@
                                     <h2 class="h2 mb-2">
                                         <span class="font-monospace">{result.domain}</span>
                                     </h2>
-                                    {#if result.is_disposable}
-                                        <div class="alert alert-warning mb-0 d-inline-block">
-                                            <i class="bi bi-exclamation-triangle me-2"></i>
-                                            <strong
-                                                >{$t(
-                                                    "Disposable Email Provider Detected",
-                                                    "Wegwerf-E-Mail-Anbieter erkannt",
-                                                )}</strong
-                                            >
-                                            <p class="mb-0 mt-1 small">
-                                                {$t(
-                                                    "This domain is a known temporary/disposable email service. Emails from this domain may have lower deliverability.",
-                                                    "Diese Domain gehört zu einem bekannten Anbieter temporärer E-Mail-Adressen. Nachrichten von dieser Domain können schwerer zustellbar sein.",
-                                                )}
-                                            </p>
-                                        </div>
-                                    {:else}
-                                        <p class="text-muted mb-0">
-                                            {$t(
-                                                "Domain Configuration Score",
-                                                "Bewertung der Domain-Konfiguration",
-                                            )}
-                                        </p>
-                                    {/if}
+                                    <p class="text-muted mb-0">
+                                        {$t("Domain Configuration Score", "Bewertung der Domain-Konfiguration")}
+                                    </p>
                                 </div>
                                 <div class="offset-md-3 col-md-3 text-center">
                                     <div
@@ -148,7 +127,7 @@
                             <div class="d-flex justify-content-end me-lg-5 mt-3">
                                 <TinySurvey
                                     class="bg-primary-subtle rounded-4 p-3 text-center"
-                                    source={"rbl-" + result.ip}
+                                    source={"domain-" + result.domain}
                                 />
                             </div>
                         </div>

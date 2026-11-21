@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/dns/dnsmessage"
 )
 
 var mailPorts = []string{"25", "465", "587", "143", "993", "110", "995"}
@@ -171,10 +174,22 @@ func mailPortCheck(ctx context.Context, q url.Values) (*Result, error) {
 		return nil, err
 	}
 	hosts := []string{}
-	mx, _ := resolver.LookupMX(ctx, domain)
-	slices.SortFunc(mx, func(a, b *net.MX) int { return int(a.Pref) - int(b.Pref) })
+	reply, err := publicDNS(ctx, domain, dnsmessage.TypeMX)
+	if err != nil {
+		return nil, err
+	}
+	if reply.RCode == dnsmessage.RCodeNameError {
+		return nil, fail("This DNS name does not exist.", "Dieser DNS-Name existiert nicht.")
+	}
+	var mx []*dnsmessage.MXResource
+	for _, answer := range reply.Answers {
+		if record, ok := answer.Body.(*dnsmessage.MXResource); ok {
+			mx = append(mx, record)
+		}
+	}
+	slices.SortFunc(mx, func(a, b *dnsmessage.MXResource) int { return int(a.Pref) - int(b.Pref) })
 	for _, m := range mx {
-		h := strings.TrimSuffix(m.Host, ".")
+		h := strings.TrimSuffix(m.MX.String(), ".")
 		if h != "" && !slices.Contains(hosts, h) {
 			hosts = append(hosts, h)
 		}
@@ -183,6 +198,10 @@ func mailPortCheck(ctx context.Context, q url.Values) (*Result, error) {
 		}
 	}
 	intro := Section{Title: T("Mail servers", "Mailserver")}
+	if len(mx) == 1 && mx[0].MX.String() == "." {
+		intro.Rows = []Row{noteRow("MX", "MX", "This domain explicitly does not accept email (null MX).", "Diese Domain nimmt laut Null-MX-Eintrag keine E-Mails an.")}
+		return &Result{Sections: []Section{intro}}, nil
+	}
 	if len(hosts) == 0 {
 		hosts = []string{domain}
 		intro.Rows = append(intro.Rows, noteRow("MX", "MX", "no MX record – checking the host itself", "kein MX-Eintrag – geprüft wird der Host selbst", "warn"))
@@ -194,41 +213,11 @@ func mailPortCheck(ctx context.Context, q url.Values) (*Result, error) {
 	sections := make([]Section, len(hosts))
 	var wg sync.WaitGroup
 	for i, host := range hosts {
-		addrs, err := lookupIPs(ctx, host)
-		var addr netip.Addr
-		for _, a := range addrs {
-			if a.Is4() && isPublic(a) {
-				addr = a
-				break
-			}
-		}
-		sections[i] = Section{Title: T(host, host)}
-		if err != nil || !addr.IsValid() {
-			sections[i].Rows = []Row{noteRow("Address", "Adresse", "no public IPv4 address", "keine öffentliche IPv4-Adresse", "bad")}
-			continue
-		}
-		sections[i].Title = T(host+" ("+addr.String()+")", host+" ("+addr.String()+")")
-		sections[i].Rows = make([]Row, len(mailServices))
-		// SMTP servers often limit parallel connections per IP, so SMTP ports
-		// are probed one after another; IMAP and POP3 run in parallel.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j, svc := range mailServices {
-				if svc.proto == "smtp" {
-					sections[i].Rows[j] = probe(ctx, host, addr, svc)
-				}
-			}
+			sections[i] = checkMailHost(ctx, host)
 		}()
-		for j, svc := range mailServices {
-			if svc.proto != "smtp" {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					sections[i].Rows[j] = probe(ctx, host, addr, svc)
-				}()
-			}
-		}
 	}
 	wg.Wait()
 	result.Sections = append(result.Sections, sections...)
@@ -237,4 +226,48 @@ func mailPortCheck(ctx context.Context, q url.Values) (*Result, error) {
 			"Geprüft werden nur die üblichen Mail-Ports; geschlossene Ports sind in Ordnung, wenn du den Dienst nicht anbietest."),
 	}})
 	return result, nil
+}
+
+func checkMailHost(ctx context.Context, host string) Section {
+	section := Section{Title: T(host, host)}
+	addrs, err := lookupIPs(ctx, host)
+	var dnsErr *dnsUnavailable
+	if errors.As(err, &dnsErr) {
+		section.Rows = []Row{dnsMissing("Address", "Adresse")}
+		return section
+	}
+	var addr netip.Addr
+	// Prefer IPv4 when both families are available.
+	for _, candidate := range addrs {
+		if isPublic(candidate) && (!addr.IsValid() || candidate.Is4()) {
+			addr = candidate
+			if addr.Is4() {
+				break
+			}
+		}
+	}
+	if !addr.IsValid() {
+		section.Rows = []Row{noteRow("Address", "Adresse", "no public A or AAAA address", "keine öffentliche A- oder AAAA-Adresse", "warn")}
+		return section
+	}
+	section.Title = T(host+" ("+addr.String()+")", host+" ("+addr.String()+")")
+	section.Rows = make([]Row, len(mailServices))
+	var wg sync.WaitGroup
+	for j, svc := range mailServices {
+		if svc.proto != "smtp" {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				section.Rows[j] = probe(ctx, host, addr, svc)
+			}()
+		}
+	}
+	// SMTP servers often limit parallel connections per IP.
+	for j, svc := range mailServices {
+		if svc.proto == "smtp" {
+			section.Rows[j] = probe(ctx, host, addr, svc)
+		}
+	}
+	wg.Wait()
+	return section
 }

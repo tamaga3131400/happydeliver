@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "$lib/stores/language";
     import type { DmarcRecord } from "$lib/api/types.gen";
 
     interface Props {
@@ -51,6 +52,13 @@
                     <span class="badge bg-danger">Invalid</span>
                 {/if}
             </div>
+
+            {#if dmarcRecord.inherited_from}
+                <p class="small text-muted">
+                    {$t("DMARC policy inherited from", "DMARC-Richtlinie geerbt von")}
+                    <code>{dmarcRecord.inherited_from}</code>
+                </p>
+            {/if}
 
             <!-- Policy -->
             {#if dmarcRecord.policy}
